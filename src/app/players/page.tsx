@@ -334,19 +334,12 @@ export default function PlayersPage() {
 
                           {/* 白色信息区域 */}
                           <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <CardTitle className="text-xl font-bold flex-1 text-left">
+                            <div className="flex items-center justify-between mb-4">
+                              <CardTitle className="text-3xl font-bold flex-1 text-left">
                                 {player.name}
                               </CardTitle>
                               <div className="flex items-center justify-center w-16 h-16 bg-red-500 text-white font-bold text-3xl rounded-lg ml-3">
                                 {player.number}
-                              </div>
-                            </div>
-
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">位置</span>
-                                <span className="font-medium">{positionLabels}</span>
                               </div>
                             </div>
 
