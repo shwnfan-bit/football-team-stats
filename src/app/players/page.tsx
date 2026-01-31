@@ -35,8 +35,12 @@ export default function PlayersPage() {
     try {
       const teamId = getChengduDadieTeamId();
       const loadedPlayers = storage.getPlayersByTeam(teamId);
+      console.log('加载到的球员数据:', loadedPlayers);
+      
       // 过滤掉旧格式的数据（没有 birthday 字段的）
-      const validPlayers = loadedPlayers.filter(p => p.birthday);
+      const validPlayers = loadedPlayers.filter(p => p && p.birthday);
+      console.log('有效的球员数据:', validPlayers);
+      
       setPlayers(validPlayers);
     } catch (error) {
       console.error('加载球员数据失败:', error);
@@ -45,34 +49,63 @@ export default function PlayersPage() {
   };
 
   const handleAddPlayer = () => {
-    if (!newPlayer.name.trim() || !newPlayer.number || !newPlayer.birthday) return;
+    console.log('开始添加球员:', newPlayer);
+    
+    // 验证必填字段
+    if (!newPlayer.name.trim()) {
+      alert('请输入球员姓名');
+      return;
+    }
+    if (!newPlayer.number) {
+      alert('请输入球衣号码');
+      return;
+    }
+    if (!newPlayer.birthday) {
+      alert('请选择生日');
+      return;
+    }
+    if (!newPlayer.primaryPosition) {
+      alert('请选择第一位置');
+      return;
+    }
 
-    const teamId = getChengduDadieTeamId();
-    const player: Player = {
-      id: generateId(),
-      teamId,
-      name: newPlayer.name,
-      number: parseInt(newPlayer.number),
-      positions: [newPlayer.primaryPosition, newPlayer.secondaryPosition],
-      birthday: newPlayer.birthday,
-      height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
-      weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
-      isCaptain: newPlayer.isCaptain,
-      createdAt: Date.now(),
-    };
+    try {
+      const teamId = getChengduDadieTeamId();
+      const player: Player = {
+        id: generateId(),
+        teamId,
+        name: newPlayer.name.trim(),
+        number: parseInt(newPlayer.number),
+        positions: [newPlayer.primaryPosition, newPlayer.secondaryPosition],
+        birthday: newPlayer.birthday,
+        height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
+        weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
+        isCaptain: newPlayer.isCaptain,
+        createdAt: Date.now(),
+      };
 
-    storage.addPlayer(player);
-    setPlayers([...players, player]);
-    setIsAddDialogOpen(false);
-    resetForm();
+      console.log('创建球员对象:', player);
+      storage.addPlayer(player);
+      console.log('球员已保存到存储');
+      
+      // 重新加载球员列表
+      loadPlayers();
+      
+      setIsAddDialogOpen(false);
+      resetForm();
+      console.log('球员添加完成');
+    } catch (error) {
+      console.error('添加球员失败:', error);
+      alert('添加球员失败: ' + (error as Error).message);
+    }
   };
 
   const resetForm = () => {
     setNewPlayer({
       name: '',
       number: '',
-      primaryPosition: 'midfielder',
-      secondaryPosition: null,
+      primaryPosition: 'midfielder' as PlayerPosition,
+      secondaryPosition: null as PlayerPosition | null,
       birthday: '',
       height: '',
       weight: '',
@@ -88,12 +121,19 @@ export default function PlayersPage() {
   };
 
   const groupedPlayers = players.reduce((acc, player) => {
-    const primaryPos = player.positions[0];
-    if (!acc[primaryPos]) {
-      acc[primaryPos] = [];
+    try {
+      const primaryPos = player.positions && player.positions[0];
+      if (!primaryPos) return acc;
+      
+      if (!acc[primaryPos]) {
+        acc[primaryPos] = [];
+      }
+      acc[primaryPos].push(player);
+      return acc;
+    } catch (error) {
+      console.error('分组球员时出错:', error, player);
+      return acc;
     }
-    acc[primaryPos].push(player);
-    return acc;
   }, {} as Record<PlayerPosition, Player[]>);
 
   const age = newPlayer.birthday ? calculateAge(newPlayer.birthday) : 0;
@@ -256,58 +296,59 @@ export default function PlayersPage() {
                 </h3>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {positionPlayers.map((player) => {
-                    const playerAge = calculateAge(player.birthday);
-                    const positionLabels = player.positions
-                      .filter(p => p !== null)
-                      .map(p => POSITION_LABELS[p])
-                      .join(' / ');
-                    
-                    return (
-                      <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                        <CardHeader className="pb-3 bg-gradient-to-r from-red-500 to-red-600">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-white text-red-600 font-bold text-xl shadow-lg">
-                                {player.number}
-                              </div>
-                              <div className="text-white">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                  {player.name}
-                                  {player.isCaptain && (
-                                    <Shield className="h-4 w-4 text-yellow-300" />
-                                  )}
-                                </CardTitle>
-                                <p className="text-xs text-red-100 mt-1">
-                                  {playerAge}岁
-                                </p>
+                    try {
+                      const playerAge = calculateAge(player.birthday || '');
+                      const positionLabels = player.positions
+                        .filter(p => p !== null)
+                        .map(p => POSITION_LABELS[p as PlayerPosition])
+                        .join(' / ');
+                      
+                      return (
+                        <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                          <CardHeader className="pb-3 bg-gradient-to-r from-red-500 to-red-600">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-white text-red-600 font-bold text-xl shadow-lg">
+                                  {player.number}
+                                </div>
+                                <div className="text-white">
+                                  <CardTitle className="text-base flex items-center gap-2">
+                                    {player.name}
+                                    {player.isCaptain && (
+                                      <Shield className="h-4 w-4 text-yellow-300" />
+                                    )}
+                                  </CardTitle>
+                                  <p className="text-xs text-red-100 mt-1">
+                                    {playerAge}岁
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-4">
-                          <div className="space-y-2 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">位置</span>
-                              <span className="font-medium">{positionLabels}</span>
-                            </div>
-                            {player.height && (
+                          </CardHeader>
+                          <CardContent className="pt-4">
+                            <div className="space-y-2 text-xs">
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">身高</span>
-                                <span className="font-medium">{player.height}cm</span>
+                                <span className="text-muted-foreground">位置</span>
+                                <span className="font-medium">{positionLabels}</span>
                               </div>
-                            )}
-                            {player.weight && (
+                              {player.height && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">身高</span>
+                                  <span className="font-medium">{player.height}cm</span>
+                                </div>
+                              )}
+                              {player.weight && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">体重</span>
+                                  <span className="font-medium">{player.weight}kg</span>
+                                </div>
+                              )}
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">体重</span>
-                                <span className="font-medium">{player.weight}kg</span>
+                                <span className="text-muted-foreground">生日</span>
+                                <span className="font-medium">{new Date(player.birthday || '').toLocaleDateString('zh-CN')}</span>
                               </div>
-                            )}
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">生日</span>
-                              <span className="font-medium">{new Date(player.birthday).toLocaleDateString('zh-CN')}</span>
                             </div>
-                          </div>
-                          <div className="mt-4 pt-4 border-t flex justify-end">
+                            <div className="mt-4 pt-4 border-t flex justify-end">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -320,7 +361,25 @@ export default function PlayersPage() {
                         </CardContent>
                       </Card>
                     );
-                  })}
+                  } catch (error) {
+                    console.error('渲染球员卡片时出错:', error, player);
+                    return (
+                      <Card key={player.id} className="border-red-300">
+                        <CardContent className="p-4">
+                          <p className="text-red-500">球员数据加载失败</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => handleDeletePlayer(player.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                })}
                 </div>
               </div>
             ))}
