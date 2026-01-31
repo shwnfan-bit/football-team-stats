@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, UserPlus, Trash2, Shield } from 'lucide-react';
+import { Plus, UserPlus, Trash2, Shield, Edit2, Camera, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -15,6 +15,8 @@ import { Player, PlayerPosition, POSITION_LABELS } from '@/types';
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
   const [newPlayer, setNewPlayer] = useState({
     name: '',
     number: '',
@@ -24,6 +26,7 @@ export default function PlayersPage() {
     height: '',
     weight: '',
     isCaptain: false,
+    photo: '' as string,
   });
 
   useEffect(() => {
@@ -45,6 +48,17 @@ export default function PlayersPage() {
     } catch (error) {
       console.error('加载球员数据失败:', error);
       setPlayers([]);
+    }
+  };
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewPlayer({ ...newPlayer, photo: reader.result as string });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -81,6 +95,7 @@ export default function PlayersPage() {
         height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
         weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
         isCaptain: newPlayer.isCaptain,
+        photo: newPlayer.photo || undefined,
         createdAt: Date.now(),
       };
 
@@ -100,6 +115,81 @@ export default function PlayersPage() {
     }
   };
 
+  const handleEditPlayer = (playerId: string) => {
+    const player = players.find(p => p.id === playerId);
+    if (player) {
+      setEditingPlayerId(playerId);
+      setNewPlayer({
+        name: player.name,
+        number: player.number.toString(),
+        primaryPosition: player.positions[0],
+        secondaryPosition: player.positions[1],
+        birthday: player.birthday,
+        height: player.height?.toString() || '',
+        weight: player.weight?.toString() || '',
+        isCaptain: player.isCaptain || false,
+        photo: player.photo || '',
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleUpdatePlayer = () => {
+    if (!editingPlayerId) return;
+
+    console.log('开始更新球员:', newPlayer);
+    
+    // 验证必填字段
+    if (!newPlayer.name.trim()) {
+      alert('请输入球员姓名');
+      return;
+    }
+    if (!newPlayer.number) {
+      alert('请输入球衣号码');
+      return;
+    }
+    if (!newPlayer.birthday) {
+      alert('请选择生日');
+      return;
+    }
+    if (!newPlayer.primaryPosition) {
+      alert('请选择第一位置');
+      return;
+    }
+
+    try {
+      const teamId = getChengduDadieTeamId();
+      const updatedPlayer: Player = {
+        id: editingPlayerId,
+        teamId,
+        name: newPlayer.name.trim(),
+        number: parseInt(newPlayer.number),
+        positions: [newPlayer.primaryPosition, newPlayer.secondaryPosition],
+        birthday: newPlayer.birthday,
+        height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
+        weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
+        isCaptain: newPlayer.isCaptain,
+        photo: newPlayer.photo || undefined,
+        createdAt: Date.now(),
+      };
+
+      console.log('更新球员对象:', updatedPlayer);
+      storage.updatePlayer(editingPlayerId, updatedPlayer);
+      console.log('球员已更新');
+      
+      // 重新加载球员列表
+      loadPlayers();
+      
+      setIsEditDialogOpen(false);
+      setEditingPlayerId(null);
+      resetForm();
+      console.log('球员更新完成');
+    } catch (error) {
+      console.error('更新球员失败:', error);
+      alert('更新球员失败: ' + (error as Error).message);
+    }
+  };
+
   const resetForm = () => {
     setNewPlayer({
       name: '',
@@ -110,6 +200,7 @@ export default function PlayersPage() {
       height: '',
       weight: '',
       isCaptain: false,
+      photo: '' as string,
     });
   };
 
@@ -164,112 +255,28 @@ export default function PlayersPage() {
               <DialogHeader>
                 <DialogTitle>添加新球员</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="player-name">球员姓名 *</Label>
-                  <Input
-                    id="player-name"
-                    placeholder="例如：梅西"
-                    value={newPlayer.name}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="player-number">球衣号码 *</Label>
-                  <Input
-                    id="player-number"
-                    type="number"
-                    placeholder="10"
-                    value={newPlayer.number}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, number: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="player-birthday">生日 *</Label>
-                  <Input
-                    id="player-birthday"
-                    type="date"
-                    value={newPlayer.birthday}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, birthday: e.target.value })}
-                  />
-                  {age > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      年龄：{age} 岁
-                    </p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="player-primary-position">第一位置 *</Label>
-                    <Select 
-                      value={newPlayer.primaryPosition} 
-                      onValueChange={(value: PlayerPosition) => setNewPlayer({ ...newPlayer, primaryPosition: value })}
-                    >
-                      <SelectTrigger id="player-primary-position">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(POSITION_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="player-secondary-position">第二位置</Label>
-                    <Select 
-                      value={newPlayer.secondaryPosition || 'none'} 
-                      onValueChange={(value: PlayerPosition | 'none') => 
-                        setNewPlayer({ ...newPlayer, secondaryPosition: value === 'none' ? null : value })
-                      }
-                    >
-                      <SelectTrigger id="player-secondary-position">
-                        <SelectValue placeholder="可选" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">无</SelectItem>
-                        {Object.entries(POSITION_LABELS).map(([value, label]) => (
-                          <SelectItem key={value} value={value}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="player-height">身高(cm)</Label>
-                    <Input
-                      id="player-height"
-                      type="number"
-                      placeholder="175"
-                      value={newPlayer.height}
-                      onChange={(e) => setNewPlayer({ ...newPlayer, height: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="player-weight">体重(kg)</Label>
-                    <Input
-                      id="player-weight"
-                      type="number"
-                      placeholder="70"
-                      value={newPlayer.weight}
-                      onChange={(e) => setNewPlayer({ ...newPlayer, weight: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="is-captain"
-                    checked={newPlayer.isCaptain}
-                    onChange={(e) => setNewPlayer({ ...newPlayer, isCaptain: e.target.checked })}
-                  />
-                  <Label htmlFor="is-captain" className="cursor-pointer">队长</Label>
-                </div>
-                <Button onClick={handleAddPlayer} className="w-full">
-                  添加球员
-                </Button>
-              </div>
+              <PlayerForm
+                formData={newPlayer}
+                setFormData={setNewPlayer}
+                age={age}
+                onSubmit={handleAddPlayer}
+                submitLabel="添加球员"
+              />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>编辑球员</DialogTitle>
+              </DialogHeader>
+              <PlayerForm
+                formData={newPlayer}
+                setFormData={setNewPlayer}
+                age={age}
+                onSubmit={handleUpdatePlayer}
+                submitLabel="保存修改"
+              />
             </DialogContent>
           </Dialog>
         </div>
@@ -308,18 +315,32 @@ export default function PlayersPage() {
                           <CardHeader className="pb-3 bg-gradient-to-r from-red-500 to-red-600">
                             <div className="flex items-start justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-white text-red-600 font-bold text-xl shadow-lg">
-                                  {player.number}
+                                <div className="relative">
+                                  {player.photo ? (
+                                    <div className="w-14 h-14 rounded-full overflow-hidden bg-white shadow-lg">
+                                      <img
+                                        src={player.photo}
+                                        alt={player.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-center w-14 h-14 rounded-full bg-white text-red-600 font-bold text-xl shadow-lg">
+                                      {player.number}
+                                    </div>
+                                  )}
+                                  {player.isCaptain && (
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center shadow-md">
+                                      <Shield className="h-3 w-3 text-white" />
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="text-white">
                                   <CardTitle className="text-base flex items-center gap-2">
                                     {player.name}
-                                    {player.isCaptain && (
-                                      <Shield className="h-4 w-4 text-yellow-300" />
-                                    )}
                                   </CardTitle>
                                   <p className="text-xs text-red-100 mt-1">
-                                    {playerAge}岁
+                                    {playerAge}岁 · #{player.number}
                                   </p>
                                 </div>
                               </div>
@@ -331,61 +352,225 @@ export default function PlayersPage() {
                                 <span className="text-muted-foreground">位置</span>
                                 <span className="font-medium">{positionLabels}</span>
                               </div>
-                              {player.height && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">身高</span>
-                                  <span className="font-medium">{player.height}cm</span>
-                                </div>
-                              )}
-                              {player.weight && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">体重</span>
-                                  <span className="font-medium">{player.weight}kg</span>
-                                </div>
-                              )}
                               <div className="flex justify-between">
-                                <span className="text-muted-foreground">生日</span>
-                                <span className="font-medium">{new Date(player.birthday || '').toLocaleDateString('zh-CN')}</span>
+                                <span className="text-muted-foreground">身高</span>
+                                <span className="font-medium">{player.height ? `${player.height}cm` : '-'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">体重</span>
+                                <span className="font-medium">{player.weight ? `${player.weight}kg` : '-'}</span>
                               </div>
                             </div>
-                            <div className="mt-4 pt-4 border-t flex justify-end">
+                            <div className="mt-4 pt-4 border-t flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditPlayer(player.id)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDeletePlayer(player.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    } catch (error) {
+                      console.error('渲染球员卡片时出错:', error, player);
+                      return (
+                        <Card key={player.id} className="border-red-300">
+                          <CardContent className="p-4">
+                            <p className="text-red-500">球员数据加载失败</p>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-destructive hover:text-destructive"
+                              className="text-destructive"
                               onClick={() => handleDeletePlayer(player.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  } catch (error) {
-                    console.error('渲染球员卡片时出错:', error, player);
-                    return (
-                      <Card key={player.id} className="border-red-300">
-                        <CardContent className="p-4">
-                          <p className="text-red-500">球员数据加载失败</p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => handleDeletePlayer(player.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  }
-                })}
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+                  })}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// 球员表单组件
+function PlayerForm({ formData, setFormData, age, onSubmit, submitLabel }: any) {
+  return (
+    <div className="space-y-4 pt-4">
+      {/* 照片上传 */}
+      <div className="space-y-2">
+        <Label htmlFor="player-photo">球员照片</Label>
+        <div className="flex items-center gap-4">
+          <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            {formData.photo ? (
+              <img
+                src={formData.photo}
+                alt="预览"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="h-10 w-10 text-slate-400" />
+            )}
+          </div>
+          <div className="flex-1">
+            <Label htmlFor="photo-upload" className="cursor-pointer">
+              <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                <Camera className="h-4 w-4" />
+                <span className="text-sm">上传照片</span>
+              </div>
+            </Label>
+            <Input
+              id="photo-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setFormData({ ...formData, photo: reader.result as string });
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+            {formData.photo && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-xs text-destructive"
+                onClick={() => setFormData({ ...formData, photo: '' })}
+              >
+                删除照片
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="player-name">球员姓名 *</Label>
+        <Input
+          id="player-name"
+          placeholder="例如：梅西"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="player-number">球衣号码 *</Label>
+        <Input
+          id="player-number"
+          type="number"
+          placeholder="10"
+          value={formData.number}
+          onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="player-birthday">生日 *</Label>
+        <Input
+          id="player-birthday"
+          type="date"
+          value={formData.birthday}
+          onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+        />
+        {age > 0 && (
+          <p className="text-xs text-muted-foreground">
+            年龄：{age} 岁
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="player-primary-position">第一位置 *</Label>
+          <Select 
+            value={formData.primaryPosition} 
+            onValueChange={(value: PlayerPosition) => setFormData({ ...formData, primaryPosition: value })}
+          >
+            <SelectTrigger id="player-primary-position">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(POSITION_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="player-secondary-position">第二位置</Label>
+          <Select 
+            value={formData.secondaryPosition || 'none'} 
+            onValueChange={(value: PlayerPosition | 'none') => 
+              setFormData({ ...formData, secondaryPosition: value === 'none' ? null : value })
+            }
+          >
+            <SelectTrigger id="player-secondary-position">
+              <SelectValue placeholder="可选" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">无</SelectItem>
+              {Object.entries(POSITION_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="player-height">身高(cm)</Label>
+          <Input
+            id="player-height"
+            type="number"
+            placeholder="175"
+            value={formData.height}
+            onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="player-weight">体重(kg)</Label>
+          <Input
+            id="player-weight"
+            type="number"
+            placeholder="70"
+            value={formData.weight}
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="is-captain"
+          checked={formData.isCaptain}
+          onChange={(e) => setFormData({ ...formData, isCaptain: e.target.checked })}
+        />
+        <Label htmlFor="is-captain" className="cursor-pointer">队长</Label>
+      </div>
+      <Button onClick={onSubmit} className="w-full">
+        {submitLabel}
+      </Button>
     </div>
   );
 }
