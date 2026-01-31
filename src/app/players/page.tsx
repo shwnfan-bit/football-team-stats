@@ -333,17 +333,17 @@ export default function PlayersPage() {
                           </div>
 
                           {/* 白色信息区域 */}
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-4">
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between mb-3">
                               <CardTitle className="text-3xl font-bold flex-1 text-left">
                                 {player.name}
                               </CardTitle>
-                              <div className="flex items-center justify-center w-16 h-16 bg-red-500 text-white font-bold text-3xl rounded-lg ml-3">
+                              <div className="flex items-center justify-center w-12 h-12 bg-red-500 text-white font-bold text-2xl rounded-lg ml-3">
                                 {player.number}
                               </div>
                             </div>
 
-                            <div className="mt-4 pt-4 border-t flex justify-end gap-2">
+                            <div className="pt-3 border-t flex justify-end gap-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
