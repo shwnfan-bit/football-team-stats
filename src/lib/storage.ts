@@ -52,7 +52,9 @@ export const storage = {
   getPlayers: (): Player[] => {
     if (typeof window === 'undefined') return [];
     const data = localStorage.getItem(STORAGE_KEYS.PLAYERS);
-    return data ? JSON.parse(data) : [];
+    const players = data ? JSON.parse(data) : [];
+    console.log('storage.getPlayers 读取到', players.length, '个球员');
+    return players;
   },
 
   getPlayersByTeam: (teamId: string): Player[] => {
@@ -61,13 +63,18 @@ export const storage = {
 
   setPlayers: (players: Player[]) => {
     if (typeof window === 'undefined') return;
+    console.log('storage.setPlayers 保存', players.length, '个球员');
     localStorage.setItem(STORAGE_KEYS.PLAYERS, JSON.stringify(players));
+    console.log('storage.setPlayers 已保存到 localStorage');
   },
 
   addPlayer: (player: Player) => {
+    console.log('storage.addPlayer 开始，当前球员数量:', storage.getPlayers().length);
     const players = storage.getPlayers();
     players.push(player);
     storage.setPlayers(players);
+    console.log('storage.addPlayer 完成，新增球员数量:', storage.getPlayers().length);
+    console.log('保存的球员数据:', player);
   },
 
   updatePlayer: (playerId: string, updatedPlayer: Partial<Player>) => {

@@ -39,11 +39,13 @@ export default function PlayersPage() {
       const loadedPlayers = storage.getPlayersByTeam(teamId);
       console.log('加载到的球员数据:', loadedPlayers);
       
-      // 过滤掉旧格式的数据（没有 birthday 字段或使用了旧位置格式）
+      // 过滤掉旧格式的数据（没有 birthday 字段或没有 position 字段的）
       const validPlayers = loadedPlayers.filter(p => {
         if (!p.birthday) return false;
         // 检查是否有 position 字段（新格式）
-        return p.position !== undefined;
+        // 使用类型断言来检查可能存在的字段
+        const playerAny = p as any;
+        return playerAny.position !== undefined || playerAny.positions !== undefined;
       });
       console.log('有效的球员数据:', validPlayers);
       

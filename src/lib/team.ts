@@ -20,10 +20,10 @@ export const initializeChengduDadieTeam = () => {
     storage.addTeam(CHENGDU_DADIE_TEAM);
   }
   
-  // 清理旧格式的球员数据（没有 birthday 字段的）
+  // 清理旧格式的球员数据（没有 birthday 字段或 position 字段的）
   try {
     const players = storage.getPlayersByTeam(CHENGDU_DADIE_TEAM_ID);
-    const invalidPlayers = players.filter((p: any) => !p.birthday || !p.positions);
+    const invalidPlayers = players.filter((p: any) => !p.birthday || (!p.position && !p.positions));
     if (invalidPlayers.length > 0) {
       console.log('清理旧格式球员数据:', invalidPlayers.length, '个');
       // 删除旧数据
