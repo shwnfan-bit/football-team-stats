@@ -17,11 +17,10 @@ export default function PlayersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
-  const [newPlayer, setNewPlayer] = useState({
+  const [formData, setFormData] = useState({
     name: '',
     number: '',
-    primaryPosition: 'midfielder' as PlayerPosition,
-    secondaryPosition: null as PlayerPosition | null,
+    position: 'midfielder' as PlayerPosition,
     birthday: '',
     height: '',
     weight: '',
@@ -40,10 +39,20 @@ export default function PlayersPage() {
       const loadedPlayers = storage.getPlayersByTeam(teamId);
       console.log('加载到的球员数据:', loadedPlayers);
       
-      // 过滤掉旧格式的数据（没有 birthday 字段的）
-      const validPlayers = loadedPlayers.filter(p => p && p.birthday);
-      console.log('有效的球员数据:', validPlayers);
+      // 兼容新旧数据格式
+      const validPlayers = loadedPlayers.map(p => {
+        if (p && (p as any).positions) {
+          // 旧格式：转换 positions[0] 为 position
+          const oldPlayer = p as any;
+          return {
+            ...p,
+            position: oldPlayer.positions[0] || 'midfielder',
+          } as Player;
+        }
+        return p;
+      }).filter(p => p && p.birthday);
       
+      console.log('有效的球员数据:', validPlayers);
       setPlayers(validPlayers);
     } catch (error) {
       console.error('加载球员数据失败:', error);
@@ -56,30 +65,43 @@ export default function PlayersPage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setNewPlayer({ ...newPlayer, photo: reader.result as string });
+        setFormData({ ...formData, photo: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      number: '',
+      position: 'midfielder' as PlayerPosition,
+      birthday: '',
+      height: '',
+      weight: '',
+      isCaptain: false,
+      photo: '',
+    });
+  };
+
   const handleAddPlayer = () => {
-    console.log('开始添加球员:', newPlayer);
+    console.log('开始添加球员:', formData);
     
     // 验证必填字段
-    if (!newPlayer.name.trim()) {
+    if (!formData.name.trim()) {
       alert('请输入球员姓名');
       return;
     }
-    if (!newPlayer.number) {
+    if (!formData.number) {
       alert('请输入球衣号码');
       return;
     }
-    if (!newPlayer.birthday) {
+    if (!formData.birthday) {
       alert('请选择生日');
       return;
     }
-    if (!newPlayer.primaryPosition) {
-      alert('请选择第一位置');
+    if (!formData.position) {
+      alert('请选择位置');
       return;
     }
 
@@ -88,14 +110,14 @@ export default function PlayersPage() {
       const player: Player = {
         id: generateId(),
         teamId,
-        name: newPlayer.name.trim(),
-        number: parseInt(newPlayer.number),
-        positions: [newPlayer.primaryPosition, newPlayer.secondaryPosition],
-        birthday: newPlayer.birthday,
-        height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
-        weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
-        isCaptain: newPlayer.isCaptain,
-        photo: newPlayer.photo || undefined,
+        name: formData.name.trim(),
+        number: parseInt(formData.number),
+        position: formData.position,
+        birthday: formData.birthday,
+        height: formData.height ? parseInt(formData.height) : undefined,
+        weight: formData.weight ? parseInt(formData.weight) : undefined,
+        isCaptain: formData.isCaptain,
+        photo: formData.photo || undefined,
         createdAt: Date.now(),
       };
 
@@ -119,11 +141,10 @@ export default function PlayersPage() {
     const player = players.find(p => p.id === playerId);
     if (player) {
       setEditingPlayerId(playerId);
-      setNewPlayer({
+      setFormData({
         name: player.name,
         number: player.number.toString(),
-        primaryPosition: player.positions[0],
-        secondaryPosition: player.positions[1],
+        position: player.position,
         birthday: player.birthday,
         height: player.height?.toString() || '',
         weight: player.weight?.toString() || '',
@@ -137,23 +158,23 @@ export default function PlayersPage() {
   const handleUpdatePlayer = () => {
     if (!editingPlayerId) return;
 
-    console.log('开始更新球员:', newPlayer);
+    console.log('开始更新球员:', formData);
     
     // 验证必填字段
-    if (!newPlayer.name.trim()) {
+    if (!formData.name.trim()) {
       alert('请输入球员姓名');
       return;
     }
-    if (!newPlayer.number) {
+    if (!formData.number) {
       alert('请输入球衣号码');
       return;
     }
-    if (!newPlayer.birthday) {
+    if (!formData.birthday) {
       alert('请选择生日');
       return;
     }
-    if (!newPlayer.primaryPosition) {
-      alert('请选择第一位置');
+    if (!formData.position) {
+      alert('请选择位置');
       return;
     }
 
@@ -162,14 +183,14 @@ export default function PlayersPage() {
       const updatedPlayer: Player = {
         id: editingPlayerId,
         teamId,
-        name: newPlayer.name.trim(),
-        number: parseInt(newPlayer.number),
-        positions: [newPlayer.primaryPosition, newPlayer.secondaryPosition],
-        birthday: newPlayer.birthday,
-        height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
-        weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
-        isCaptain: newPlayer.isCaptain,
-        photo: newPlayer.photo || undefined,
+        name: formData.name.trim(),
+        number: parseInt(formData.number),
+        position: formData.position,
+        birthday: formData.birthday,
+        height: formData.height ? parseInt(formData.height) : undefined,
+        weight: formData.weight ? parseInt(formData.weight) : undefined,
+        isCaptain: formData.isCaptain,
+        photo: formData.photo || undefined,
         createdAt: Date.now(),
       };
 
@@ -190,369 +211,408 @@ export default function PlayersPage() {
     }
   };
 
-  const resetForm = () => {
-    setNewPlayer({
-      name: '',
-      number: '',
-      primaryPosition: 'midfielder' as PlayerPosition,
-      secondaryPosition: null as PlayerPosition | null,
-      birthday: '',
-      height: '',
-      weight: '',
-      isCaptain: false,
-      photo: '' as string,
-    });
-  };
-
   const handleDeletePlayer = (playerId: string) => {
-    if (confirm('确定要删除这个球员吗？')) {
-      storage.deletePlayer(playerId);
-      setPlayers(players.filter(p => p.id !== playerId));
+    if (confirm('确定要删除该球员吗？')) {
+      try {
+        storage.deletePlayer(playerId);
+        loadPlayers();
+      } catch (error) {
+        console.error('删除球员失败:', error);
+        alert('删除球员失败');
+      }
     }
   };
-
-  const groupedPlayers = players.reduce((acc, player) => {
-    try {
-      const primaryPos = player.positions && player.positions[0];
-      if (!primaryPos) return acc;
-      
-      if (!acc[primaryPos]) {
-        acc[primaryPos] = [];
-      }
-      acc[primaryPos].push(player);
-      return acc;
-    } catch (error) {
-      console.error('分组球员时出错:', error, player);
-      return acc;
-    }
-  }, {} as Record<PlayerPosition, Player[]>);
-
-  const age = newPlayer.birthday ? calculateAge(newPlayer.birthday) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-slate-100 dark:from-red-950/20 dark:to-slate-900 pb-20 md:pb-0 pt-16 md:pt-16">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-2">
-            👥 球员管理
-          </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            管理成都老爹队球员信息
-          </p>
-        </div>
-
-        {/* Controls */}
-        <div className="mb-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">球员管理</h1>
+            <p className="text-gray-600">管理成都老爹队的球员信息</p>
+          </div>
+          
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
-                <UserPlus className="h-4 w-4" />
+              <Button className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5" />
                 添加球员
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>添加新球员</DialogTitle>
               </DialogHeader>
-              <PlayerForm
-                formData={newPlayer}
-                setFormData={setNewPlayer}
-                age={age}
-                onSubmit={handleAddPlayer}
-                submitLabel="添加球员"
-              />
-            </DialogContent>
-          </Dialog>
+              
+              <div className="space-y-6">
+                {/* 照片上传 */}
+                <div className="flex items-center gap-6">
+                  <div className="relative w-32 h-40 bg-gray-200 rounded-lg overflow-hidden border-2 border-gray-300">
+                    {formData.photo ? (
+                      <img src={formData.photo} alt="预览" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                        <User className="w-12 h-12" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="photo-upload" className="cursor-pointer">
+                      <Button variant="outline" asChild>
+                        <span className="flex items-center gap-2">
+                          <Camera className="w-4 h-4" />
+                          上传照片
+                        </span>
+                      </Button>
+                    </Label>
+                    <input
+                      id="photo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">支持 JPG、PNG 格式</p>
+                  </div>
+                </div>
 
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>编辑球员</DialogTitle>
-              </DialogHeader>
-              <PlayerForm
-                formData={newPlayer}
-                setFormData={setNewPlayer}
-                age={age}
-                onSubmit={handleUpdatePlayer}
-                submitLabel="保存修改"
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
+                {/* 基本信息 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="player-name">姓名 *</Label>
+                    <Input
+                      id="player-name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="请输入姓名"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="player-number">号码 *</Label>
+                    <Input
+                      id="player-number"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={formData.number}
+                      onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                      placeholder="1-99"
+                    />
+                  </div>
+                </div>
 
-        {/* Players List */}
-        {players.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <UserPlus className="h-16 w-16 text-slate-300 dark:text-slate-600 mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50 mb-2">
-                暂无球员
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 text-center max-w-md mb-4">
-                点击添加按钮创建第一个球员
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedPlayers).map(([position, positionPlayers]) => (
-              <div key={position}>
-                <h3 className="text-lg font-semibold mb-3 text-slate-700 dark:text-slate-300">
-                  {POSITION_LABELS[position as PlayerPosition]} ({positionPlayers.length})
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {positionPlayers.map((player) => {
-                    try {
-                      const playerAge = calculateAge(player.birthday || '');
-                      const positionLabels = player.positions
-                        .filter(p => p !== null)
-                        .map(p => POSITION_LABELS[p as PlayerPosition])
-                        .join(' / ');
-                      
-                      return (
-                        <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                          {/* 照片区域 - 5:4 比例，全红色区域 */}
-                          <div className="relative aspect-[5/4] bg-gradient-to-r from-red-500 to-red-600 overflow-hidden">
-                            {player.photo ? (
-                              <img
-                                src={player.photo}
-                                alt={player.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-white/20">
-                                <User className="w-32 h-32" />
-                              </div>
-                            )}
-                            {player.isCaptain && (
-                              <div className="absolute top-3 right-3 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg">
-                                <Shield className="h-5 w-5 text-white" />
-                              </div>
-                            )}
-                          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="player-position">位置 *</Label>
+                  <Select
+                    value={formData.position}
+                    onValueChange={(value: PlayerPosition) => setFormData({ ...formData, position: value })}
+                  >
+                    <SelectTrigger id="player-position">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(POSITION_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                          {/* 白色信息区域 */}
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-3">
-                              <CardTitle className="text-3xl font-bold flex-1 text-left">
-                                {player.name}
-                              </CardTitle>
-                              <div className="flex items-center justify-center w-12 h-12 bg-red-500 text-white font-bold text-2xl rounded-lg ml-3">
-                                {player.number}
-                              </div>
-                            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="player-birthday">生日 *</Label>
+                    <Input
+                      id="player-birthday"
+                      type="date"
+                      value={formData.birthday}
+                      onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                      max={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="player-height">身高 (cm)</Label>
+                    <Input
+                      id="player-height"
+                      type="number"
+                      min="150"
+                      max="220"
+                      value={formData.height}
+                      onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                      placeholder="150-220"
+                    />
+                  </div>
+                </div>
 
-                            <div className="pt-3 border-t flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditPlayer(player.id)}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => handleDeletePlayer(player.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    } catch (error) {
-                      console.error('渲染球员卡片时出错:', error, player);
-                      return (
-                        <Card key={player.id} className="border-red-300">
-                          <CardContent className="p-4">
-                            <p className="text-red-500">球员数据加载失败</p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              onClick={() => handleDeletePlayer(player.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      );
-                    }
-                  })}
+                <div className="space-y-2">
+                  <Label htmlFor="player-weight">体重 (kg)</Label>
+                  <Input
+                    id="player-weight"
+                    type="number"
+                    min="40"
+                    max="120"
+                    value={formData.weight}
+                    onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                    placeholder="40-120"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is-captain"
+                    checked={formData.isCaptain}
+                    onChange={(e) => setFormData({ ...formData, isCaptain: e.target.checked })}
+                    className="w-4 h-4 border-gray-300 rounded text-red-600 focus:ring-red-500"
+                  />
+                  <Label htmlFor="is-captain" className="cursor-pointer flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    设为队长
+                  </Label>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
-// 球员表单组件
-function PlayerForm({ formData, setFormData, age, onSubmit, submitLabel }: any) {
-  return (
-    <div className="space-y-4 pt-4">
-      {/* 照片上传 */}
-      <div className="space-y-2">
-        <Label htmlFor="player-photo">球员照片</Label>
-        <div className="flex items-center gap-4">
-          <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-            {formData.photo ? (
-              <img
-                src={formData.photo}
-                alt="预览"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <User className="h-10 w-10 text-slate-400" />
-            )}
-          </div>
-          <div className="flex-1">
-            <Label htmlFor="photo-upload" className="cursor-pointer">
-              <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                <Camera className="h-4 w-4" />
-                <span className="text-sm">上传照片</span>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddDialogOpen(false);
+                    resetForm();
+                  }}
+                >
+                  取消
+                </Button>
+                <Button onClick={handleAddPlayer} className="bg-red-600 hover:bg-red-700">
+                  添加球员
+                </Button>
               </div>
-            </Label>
-            <Input
-              id="photo-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    setFormData({ ...formData, photo: reader.result as string });
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
-            {formData.photo && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="mt-2 text-xs text-destructive"
-                onClick={() => setFormData({ ...formData, photo: '' })}
-              >
-                删除照片
-              </Button>
-            )}
-          </div>
+            </DialogContent>
+          </Dialog>
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="player-name">球员姓名 *</Label>
-        <Input
-          id="player-name"
-          placeholder="例如：梅西"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="player-number">球衣号码 *</Label>
-        <Input
-          id="player-number"
-          type="number"
-          placeholder="10"
-          value={formData.number}
-          onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="player-birthday">生日 *</Label>
-        <Input
-          id="player-birthday"
-          type="date"
-          value={formData.birthday}
-          onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
-        />
-        {age > 0 && (
-          <p className="text-xs text-muted-foreground">
-            年龄：{age} 岁
-          </p>
+        {/* 球员卡片网格 */}
+        {players.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-lg border-2 border-dashed border-gray-300">
+            <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">暂无球员</h3>
+            <p className="text-gray-500">点击上方按钮添加第一个球员</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {players.map((player) => {
+              const age = calculateAge(player.birthday);
+              return (
+                <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="bg-red-600 aspect-[5/4] relative">
+                    {player.photo ? (
+                      <img
+                        src={player.photo}
+                        alt={player.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <User className="w-16 h-16 text-white/50" />
+                      </div>
+                    )}
+                    {player.isCaptain && (
+                      <div className="absolute top-2 right-2 bg-yellow-500 p-1.5 rounded-full">
+                        <Shield className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <CardContent className="p-4 bg-white">
+                    <div className="text-center">
+                      <p className="font-bold text-lg text-gray-900">{player.number}</p>
+                      <h3 className="font-semibold text-xl text-gray-900 mt-1">{player.name}</h3>
+                    </div>
+                    
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 text-gray-700 hover:text-red-600"
+                        onClick={() => handleEditPlayer(player.id)}
+                      >
+                        <Edit2 className="w-4 h-4 mr-1" />
+                        编辑
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-700 hover:text-red-600"
+                        onClick={() => handleDeletePlayer(player.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="player-primary-position">第一位置 *</Label>
-          <Select 
-            value={formData.primaryPosition} 
-            onValueChange={(value: PlayerPosition) => setFormData({ ...formData, primaryPosition: value })}
-          >
-            <SelectTrigger id="player-primary-position">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(POSITION_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="player-secondary-position">第二位置</Label>
-          <Select 
-            value={formData.secondaryPosition || 'none'} 
-            onValueChange={(value: PlayerPosition | 'none') => 
-              setFormData({ ...formData, secondaryPosition: value === 'none' ? null : value })
-            }
-          >
-            <SelectTrigger id="player-secondary-position">
-              <SelectValue placeholder="可选" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">无</SelectItem>
-              {Object.entries(POSITION_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="player-height">身高(cm)</Label>
-          <Input
-            id="player-height"
-            type="number"
-            placeholder="175"
-            value={formData.height}
-            onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="player-weight">体重(kg)</Label>
-          <Input
-            id="player-weight"
-            type="number"
-            placeholder="70"
-            value={formData.weight}
-            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-          />
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="is-captain"
-          checked={formData.isCaptain}
-          onChange={(e) => setFormData({ ...formData, isCaptain: e.target.checked })}
-        />
-        <Label htmlFor="is-captain" className="cursor-pointer">队长</Label>
-      </div>
-      <Button onClick={onSubmit} className="w-full">
-        {submitLabel}
-      </Button>
+
+      {/* 编辑球员对话框 */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>编辑球员</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* 照片上传 */}
+            <div className="flex items-center gap-6">
+              <div className="relative w-32 h-40 bg-gray-200 rounded-lg overflow-hidden border-2 border-gray-300">
+                {formData.photo ? (
+                  <img src={formData.photo} alt="预览" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                    <User className="w-12 h-12" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="edit-photo-upload" className="cursor-pointer">
+                  <Button variant="outline" asChild>
+                    <span className="flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      更换照片
+                    </span>
+                  </Button>
+                </Label>
+                <input
+                  id="edit-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+                <p className="text-sm text-gray-500 mt-2">支持 JPG、PNG 格式</p>
+              </div>
+            </div>
+
+            {/* 基本信息 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-player-name">姓名 *</Label>
+                <Input
+                  id="edit-player-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="请输入姓名"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-player-number">号码 *</Label>
+                <Input
+                  id="edit-player-number"
+                  type="number"
+                  min="1"
+                  max="99"
+                  value={formData.number}
+                  onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                  placeholder="1-99"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-player-position">位置 *</Label>
+              <Select
+                value={formData.position}
+                onValueChange={(value: PlayerPosition) => setFormData({ ...formData, position: value })}
+              >
+                <SelectTrigger id="edit-player-position">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(POSITION_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-player-birthday">生日 *</Label>
+                <Input
+                  id="edit-player-birthday"
+                  type="date"
+                  value={formData.birthday}
+                  onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-player-height">身高 (cm)</Label>
+                <Input
+                  id="edit-player-height"
+                  type="number"
+                  min="150"
+                  max="220"
+                  value={formData.height}
+                  onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                  placeholder="150-220"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-player-weight">体重 (kg)</Label>
+              <Input
+                id="edit-player-weight"
+                type="number"
+                min="40"
+                max="120"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                placeholder="40-120"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="edit-is-captain"
+                checked={formData.isCaptain}
+                onChange={(e) => setFormData({ ...formData, isCaptain: e.target.checked })}
+                className="w-4 h-4 border-gray-300 rounded text-red-600 focus:ring-red-500"
+              />
+              <Label htmlFor="edit-is-captain" className="cursor-pointer flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                设为队长
+              </Label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setEditingPlayerId(null);
+                resetForm();
+              }}
+            >
+              取消
+            </Button>
+            <Button onClick={handleUpdatePlayer} className="bg-red-600 hover:bg-red-700">
+              保存修改
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
