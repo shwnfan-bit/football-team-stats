@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Trophy, BarChart3, Home } from 'lucide-react';
+import { Trophy, BarChart3, Home, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', icon: Home, label: '首页' },
   { href: '/players', icon: Trophy, label: '球员' },
+  { href: '/matches', icon: Calendar, label: '比赛' },
   { href: '/stats', icon: BarChart3, label: '统计' },
 ];
 
