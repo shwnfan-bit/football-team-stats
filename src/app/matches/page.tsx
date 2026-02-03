@@ -1,21 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Home, Plane, Trophy, Target, Award, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, MapPin, Home, Plane, Trophy, Target, Award, ChevronDown, ChevronUp, Edit2, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { storage } from '@/lib/storage';
 import { initializeChengduDadieTeam, getChengduDadieTeamId } from '@/lib/team';
-import { Match } from '@/types';
+import { Match, Player, PlayerPosition, POSITION_LABELS } from '@/types';
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [editMatch, setEditMatch] = useState({
+    opponent: '',
+    date: '',
+    location: '',
+    matchType: 'home' as 'home' | 'away',
+    matchNature: 'friendly' as 'friendly' | 'internal' | 'cup' | 'league',
+    scoreHome: 0,
+    scoreAway: 0,
+    playerStats: {} as Record<string, { isPlaying: boolean; goals: number; assists: number }>,
+  });
 
   useEffect(() => {
     initializeChengduDadieTeam();
     loadMatches();
+    loadPlayers();
   }, []);
 
   const loadMatches = () => {
@@ -28,6 +46,17 @@ export default function MatchesPage() {
     } catch (error) {
       console.error('加载比赛数据失败:', error);
       setMatches([]);
+    }
+  };
+
+  const loadPlayers = () => {
+    try {
+      const teamId = getChengduDadieTeamId();
+      const loadedPlayers = storage.getPlayersByTeam(teamId);
+      setPlayers(loadedPlayers);
+    } catch (error) {
+      console.error('加载球员数据失败:', error);
+      setPlayers([]);
     }
   };
 
@@ -76,6 +105,118 @@ export default function MatchesPage() {
       month: '2-digit',
       day: '2-digit',
     });
+  };
+
+  const handleEditMatch = (matchId: string) => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) return;
+
+    setEditingMatchId(matchId);
+    
+    // 转换 playerStats 为表单格式
+    const playerStatsMap: Record<string, { isPlaying: boolean; goals: number; assists: number }> = {};
+    match.playerStats.forEach(ps => {
+      playerStatsMap[ps.playerId] = {
+        isPlaying: ps.isPlaying,
+        goals: ps.goals,
+        assists: ps.assists,
+      };
+    });
+
+    setEditMatch({
+      opponent: match.opponent,
+      date: match.date,
+      location: match.location || '',
+      matchType: match.matchType,
+      matchNature: match.matchNature,
+      scoreHome: match.score.home,
+      scoreAway: match.score.away,
+      playerStats: playerStatsMap,
+    });
+    
+    setIsEditDialogOpen(true);
+  };
+
+  const handlePlayerToggle = (playerId: string) => {
+    setEditMatch(prev => ({
+      ...prev,
+      playerStats: {
+        ...prev.playerStats,
+        [playerId]: {
+          ...prev.playerStats[playerId],
+          isPlaying: !prev.playerStats[playerId]?.isPlaying || false,
+          goals: prev.playerStats[playerId]?.goals || 0,
+          assists: prev.playerStats[playerId]?.assists || 0,
+        }
+      }
+    }));
+  };
+
+  const handlePlayerStatChange = (playerId: string, stat: 'goals' | 'assists', value: number) => {
+    setEditMatch(prev => ({
+      ...prev,
+      playerStats: {
+        ...prev.playerStats,
+        [playerId]: {
+          ...prev.playerStats[playerId],
+          [stat]: Math.max(0, value),
+        }
+      }
+    }));
+  };
+
+  const handleUpdateMatch = () => {
+    if (!editingMatchId) return;
+
+    if (!editMatch.opponent.trim() || !editMatch.date) {
+      alert('请填写完整的比赛信息');
+      return;
+    }
+
+    try {
+      const teamId = getChengduDadieTeamId();
+      
+      // 构建 playerStats 数组
+      const matchPlayerStats = Object.entries(editMatch.playerStats)
+        .filter(([_, stats]) => stats.isPlaying)
+        .map(([playerId, stats]) => {
+          const player = players.find(p => p.id === playerId);
+          return {
+            playerId: playerId,
+            playerName: player!.name,
+            playerNumber: player!.number,
+            playerPosition: player!.position,
+            isPlaying: true,
+            goals: stats.goals,
+            assists: stats.assists,
+          };
+        });
+
+      const updatedMatch: Match = {
+        id: editingMatchId,
+        teamId,
+        opponent: editMatch.opponent.trim(),
+        date: editMatch.date,
+        location: editMatch.location || '未知',
+        matchType: editMatch.matchType,
+        matchNature: editMatch.matchNature,
+        score: {
+          home: editMatch.scoreHome,
+          away: editMatch.scoreAway,
+        },
+        status: 'completed',
+        playerStats: matchPlayerStats,
+        createdAt: Date.now(),
+      };
+
+      storage.updateMatch(editingMatchId, updatedMatch);
+      loadMatches();
+      setIsEditDialogOpen(false);
+      setEditingMatchId(null);
+    } catch (error) {
+      console.error('更新比赛失败:', error);
+      alert('更新比赛失败: ' + (error as Error).message);
+    }
   };
 
   return (
@@ -171,6 +312,17 @@ export default function MatchesPage() {
                           {match.location}
                         </div>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditMatch(match.id);
+                        }}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
 
@@ -230,6 +382,168 @@ export default function MatchesPage() {
           </div>
         )}
       </div>
+
+      {/* 编辑比赛对话框 */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>编辑比赛</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-opponent">对手 *</Label>
+                <Input
+                  id="edit-opponent"
+                  value={editMatch.opponent}
+                  onChange={(e) => setEditMatch({ ...editMatch, opponent: e.target.value })}
+                  placeholder="请输入对手名称"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-date">日期 *</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editMatch.date}
+                  onChange={(e) => setEditMatch({ ...editMatch, date: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="edit-location">地点</Label>
+              <Input
+                id="edit-location"
+                value={editMatch.location}
+                onChange={(e) => setEditMatch({ ...editMatch, location: e.target.value })}
+                placeholder="请输入比赛地点"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-type">类型</Label>
+                <Select
+                  value={editMatch.matchType}
+                  onValueChange={(value: 'home' | 'away') => setEditMatch({ ...editMatch, matchType: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="home">主场</SelectItem>
+                    <SelectItem value="away">客场</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-nature">性质</Label>
+                <Select
+                  value={editMatch.matchNature}
+                  onValueChange={(value: 'friendly' | 'internal' | 'cup' | 'league') => setEditMatch({ ...editMatch, matchNature: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="friendly">友谊赛</SelectItem>
+                    <SelectItem value="internal">队内赛</SelectItem>
+                    <SelectItem value="cup">杯赛</SelectItem>
+                    <SelectItem value="league">联赛</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-score-home">我方进球 *</Label>
+                <Input
+                  id="edit-score-home"
+                  type="number"
+                  min="0"
+                  value={editMatch.scoreHome}
+                  onChange={(e) => setEditMatch({ ...editMatch, scoreHome: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-score-away">对方进球 *</Label>
+                <Input
+                  id="edit-score-away"
+                  type="number"
+                  min="0"
+                  value={editMatch.scoreAway}
+                  onChange={(e) => setEditMatch({ ...editMatch, scoreAway: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-base font-semibold">上场球员及数据</Label>
+              <div className="mt-2 space-y-2 max-h-60 overflow-y-auto border rounded-lg p-2">
+                {players.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">暂无球员，请先添加球员</p>
+                ) : (
+                  players
+                    .sort((a, b) => a.number - b.number)
+                    .map((player) => (
+                      <div key={player.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded">
+                        <input
+                          type="checkbox"
+                          checked={editMatch.playerStats[player.id]?.isPlaying || false}
+                          onChange={() => handlePlayerToggle(player.id)}
+                          className="w-4 h-4"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">#{player.number}</span>
+                            <span>{player.name}</span>
+                            {player.position && (
+                              <span className="text-xs text-slate-500">
+                                {POSITION_LABELS[player.position]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {editMatch.playerStats[player.id]?.isPlaying && (
+                          <>
+                            <div className="flex items-center gap-1">
+                              <Label htmlFor={`edit-goals-${player.id}`} className="text-xs">进球</Label>
+                              <Input
+                                id={`edit-goals-${player.id}`}
+                                type="number"
+                                min="0"
+                                value={editMatch.playerStats[player.id]?.goals || 0}
+                                onChange={(e) => handlePlayerStatChange(player.id, 'goals', parseInt(e.target.value) || 0)}
+                                className="w-16 h-8"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Label htmlFor={`edit-assists-${player.id}`} className="text-xs">助攻</Label>
+                              <Input
+                                id={`edit-assists-${player.id}`}
+                                type="number"
+                                min="0"
+                                value={editMatch.playerStats[player.id]?.assists || 0}
+                                onChange={(e) => handlePlayerStatChange(player.id, 'assists', parseInt(e.target.value) || 0)}
+                                className="w-16 h-8"
+                              />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+            <Button onClick={handleUpdateMatch} className="w-full bg-red-700 hover:bg-red-800">
+              保存修改
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
