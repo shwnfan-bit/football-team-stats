@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Home, Plane, Trophy, Target, Award, ChevronDown, ChevronUp, Edit2, User } from 'lucide-react';
+import { Calendar, MapPin, Home, Plane, Trophy, Target, Award, ChevronDown, ChevronUp, Edit2, User, Video, X, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ export default function MatchesPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [editNewVideoUrl, setEditNewVideoUrl] = useState('');
   const [editMatch, setEditMatch] = useState({
     opponent: '',
     date: '',
@@ -28,6 +29,7 @@ export default function MatchesPage() {
     scoreHome: 0,
     scoreAway: 0,
     playerStats: {} as Record<string, { isPlaying: boolean; goals: number; assists: number }>,
+    videos: [] as string[],
   });
 
   useEffect(() => {
@@ -132,6 +134,7 @@ export default function MatchesPage() {
       scoreHome: match.score.home,
       scoreAway: match.score.away,
       playerStats: playerStatsMap,
+      videos: match.videos || [],
     });
     
     setIsEditDialogOpen(true);
@@ -162,6 +165,22 @@ export default function MatchesPage() {
           [stat]: Math.max(0, value),
         }
       }
+    }));
+  };
+
+  const handleEditAddVideo = () => {
+    if (!editNewVideoUrl.trim()) return;
+    setEditMatch(prev => ({
+      ...prev,
+      videos: [...prev.videos, editNewVideoUrl.trim()],
+    }));
+    setEditNewVideoUrl('');
+  };
+
+  const handleEditRemoveVideo = (index: number) => {
+    setEditMatch(prev => ({
+      ...prev,
+      videos: prev.videos.filter((_, i) => i !== index),
     }));
   };
 
@@ -206,6 +225,7 @@ export default function MatchesPage() {
         },
         status: 'completed',
         playerStats: matchPlayerStats,
+        videos: editMatch.videos,
         createdAt: Date.now(),
       };
 
@@ -374,6 +394,32 @@ export default function MatchesPage() {
                           )}
                         </div>
                       )}
+
+                      {/* 比赛录像 */}
+                      {match.videos && match.videos.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="font-semibold mb-3 flex items-center gap-2">
+                            <Video className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            比赛录像
+                          </h3>
+                          <div className="space-y-2">
+                            {match.videos.map((url, index) => (
+                              <a
+                                key={index}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                              >
+                                <Video className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                                <span className="flex-1 text-sm text-blue-600 dark:text-blue-400 truncate">
+                                  录像 {index + 1}
+                                </span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </Card>
@@ -535,6 +581,63 @@ export default function MatchesPage() {
                       </div>
                     ))
                 )}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-base font-semibold">比赛录像</Label>
+              <div className="mt-2 space-y-2">
+                {/* 已添加的录像链接 */}
+                {editMatch.videos.length > 0 && (
+                  <div className="space-y-2">
+                    {editMatch.videos.map((url, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border">
+                        <Video className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline truncate"
+                        >
+                          {url}
+                        </a>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-slate-500 hover:text-red-600"
+                          onClick={() => handleEditRemoveVideo(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* 添加新录像链接 */}
+                <div className="flex gap-2">
+                  <Input
+                    type="url"
+                    placeholder="输入录像链接（例如：https://...）"
+                    value={editNewVideoUrl}
+                    onChange={(e) => setEditNewVideoUrl(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleEditAddVideo();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleEditAddVideo}
+                    className="flex-shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 

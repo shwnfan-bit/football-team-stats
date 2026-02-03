@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart3, Trophy, Target, TrendingUp, Users, Plus, Calendar, MapPin, Flag } from 'lucide-react';
+import { BarChart3, Trophy, Target, TrendingUp, Users, Plus, Calendar, MapPin, Flag, X, Video } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -19,6 +19,7 @@ export default function StatsPage() {
   const [teamStats, setTeamStats] = useState<any>(null);
   const [isAddMatchDialogOpen, setIsAddMatchDialogOpen] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [newVideoUrl, setNewVideoUrl] = useState('');
   const [newMatch, setNewMatch] = useState({
     opponent: '',
     date: '',
@@ -28,6 +29,7 @@ export default function StatsPage() {
     scoreHome: 0,
     scoreAway: 0,
     playerStats: {} as Record<string, { isPlaying: boolean; goals: number; assists: number }>,
+    videos: [] as string[],
   });
 
   useEffect(() => {
@@ -144,6 +146,7 @@ export default function StatsPage() {
         },
         status: 'completed',
         playerStats: matchPlayerStats,
+        videos: newMatch.videos,
         createdAt: Date.now(),
       };
 
@@ -167,6 +170,7 @@ export default function StatsPage() {
       scoreHome: 0,
       scoreAway: 0,
       playerStats: {},
+      videos: [],
     });
   };
 
@@ -198,9 +202,25 @@ export default function StatsPage() {
     }));
   };
 
+  const handleAddVideo = () => {
+    if (!newVideoUrl.trim()) return;
+    setNewMatch(prev => ({
+      ...prev,
+      videos: [...prev.videos, newVideoUrl.trim()],
+    }));
+    setNewVideoUrl('');
+  };
+
+  const handleRemoveVideo = (index: number) => {
+    setNewMatch(prev => ({
+      ...prev,
+      videos: prev.videos.filter((_, i) => i !== index),
+    }));
+  };
+
   const topScorers = [...playerStats].sort((a, b) => b.goals - a.goals).slice(0, 5);
   const topAssists = [...playerStats].sort((a, b) => b.assists - a.assists).slice(0, 5);
-  const topRated = [...playerStats].filter(p => p.avgRating > 0).sort((a, b) => b.avgRating - a.avgRating).slice(0, 5);
+  const topAttendance = [...playerStats].sort((a, b) => b.matchesPlayed - a.matchesPlayed).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-slate-100 dark:from-red-950/20 dark:to-slate-900 pb-20 md:pb-0 pt-16 md:pt-16">
@@ -375,6 +395,63 @@ export default function StatsPage() {
                   </div>
                 </div>
 
+                <div>
+                  <Label className="text-base font-semibold">比赛录像</Label>
+                  <div className="mt-2 space-y-2">
+                    {/* 已添加的录像链接 */}
+                    {newMatch.videos.length > 0 && (
+                      <div className="space-y-2">
+                        {newMatch.videos.map((url, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border">
+                            <Video className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline truncate"
+                            >
+                              {url}
+                            </a>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-slate-500 hover:text-red-600"
+                              onClick={() => handleRemoveVideo(index)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* 添加新录像链接 */}
+                    <div className="flex gap-2">
+                      <Input
+                        type="url"
+                        placeholder="输入录像链接（例如：https://...）"
+                        value={newVideoUrl}
+                        onChange={(e) => setNewVideoUrl(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddVideo();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleAddVideo}
+                        className="flex-shrink-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
                 <Button onClick={handleAddMatch} className="w-full bg-red-700 hover:bg-red-800">
                   保存比赛
                 </Button>
@@ -448,7 +525,7 @@ export default function StatsPage() {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="scorers">射手榜</TabsTrigger>
                 <TabsTrigger value="assists">助攻榜</TabsTrigger>
-                <TabsTrigger value="rating">评分榜</TabsTrigger>
+                <TabsTrigger value="attendance">出勤榜</TabsTrigger>
               </TabsList>
 
               <TabsContent value="scorers" className="space-y-4">
@@ -469,12 +546,12 @@ export default function StatsPage() {
                 />
               </TabsContent>
 
-              <TabsContent value="rating" className="space-y-4">
+              <TabsContent value="attendance" className="space-y-4">
                 <RankingCard
-                  title="评分榜"
-                  players={topRated}
-                  statKey="avgRating"
-                  statLabel="平均评分"
+                  title="出勤榜"
+                  players={topAttendance}
+                  statKey="matchesPlayed"
+                  statLabel="出场次数"
                 />
               </TabsContent>
             </Tabs>

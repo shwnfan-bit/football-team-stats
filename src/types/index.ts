@@ -47,6 +47,7 @@ export interface Match {
   };
   status?: 'completed' | 'pending';
   playerStats: PlayerMatchStats[];
+  videos?: string[]; // 录像链接数组
   createdAt: number;
 }
 
