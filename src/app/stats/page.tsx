@@ -402,13 +402,13 @@ export default function StatsPage() {
                     {newMatch.videos.length > 0 && (
                       <div className="space-y-2">
                         {newMatch.videos.map((url, index) => (
-                          <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border">
+                          <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border overflow-hidden min-w-0">
                             <Video className="w-4 h-4 text-slate-500 flex-shrink-0" />
                             <a
                               href={url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline truncate"
+                              className="flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline truncate min-w-0"
                             >
                               {url}
                             </a>
@@ -416,7 +416,7 @@ export default function StatsPage() {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0 text-slate-500 hover:text-red-600"
+                              className="h-6 w-6 p-0 text-slate-500 hover:text-red-600 flex-shrink-0"
                               onClick={() => handleRemoveVideo(index)}
                             >
                               <X className="w-4 h-4" />

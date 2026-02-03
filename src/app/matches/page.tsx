@@ -409,10 +409,10 @@ export default function MatchesPage() {
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                className="flex items-center gap-2 p-2 bg-white dark:bg-slate-900 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors overflow-hidden min-w-0"
                               >
                                 <Video className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                                <span className="flex-1 text-sm text-blue-600 dark:text-blue-400 truncate">
+                                <span className="flex-1 text-sm text-blue-600 dark:text-blue-400 truncate min-w-0">
                                   录像 {index + 1}
                                 </span>
                               </a>
@@ -591,13 +591,13 @@ export default function MatchesPage() {
                 {editMatch.videos.length > 0 && (
                   <div className="space-y-2">
                     {editMatch.videos.map((url, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border">
+                      <div key={index} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border overflow-hidden min-w-0">
                         <Video className="w-4 h-4 text-slate-500 flex-shrink-0" />
                         <a
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline truncate"
+                          className="flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline truncate min-w-0"
                         >
                           {url}
                         </a>
@@ -605,7 +605,7 @@ export default function MatchesPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 text-slate-500 hover:text-red-600"
+                          className="h-6 w-6 p-0 text-slate-500 hover:text-red-600 flex-shrink-0"
                           onClick={() => handleEditRemoveVideo(index)}
                         >
                           <X className="w-4 h-4" />
