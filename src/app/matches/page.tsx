@@ -42,7 +42,7 @@ export default function MatchesPage() {
 
   const loadMatches = async () => {
     try {
-      const teamId = getChengduDadieTeamId();
+      const teamId = await initializeChengduDadieTeam();
       const loadedMatches = await storage.getMatchesByTeam(teamId);
       // 按日期降序排列（最新的在前）
       const sortedMatches = loadedMatches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -55,7 +55,7 @@ export default function MatchesPage() {
 
   const loadPlayers = async () => {
     try {
-      const teamId = getChengduDadieTeamId();
+      const teamId = await initializeChengduDadieTeam();
       const loadedPlayers = await storage.getPlayersByTeam(teamId);
       setPlayers(loadedPlayers);
     } catch (error) {
@@ -211,8 +211,6 @@ export default function MatchesPage() {
       await storage.updateMatch(editingMatchId, updatedMatchData);
 
       // 删除旧的球员统计，然后添加新的
-      const teamId = getChengduDadieTeamId();
-      
       // 构建新的球员统计数据
       const matchPlayerStats = Object.entries(editMatch.playerStats)
         .filter(([_, stats]) => stats.isPlaying)

@@ -41,23 +41,23 @@ export default function StatsPage() {
   }, []);
 
   const loadPlayers = async () => {
-    const teamId = getChengduDadieTeamId();
+    const teamId = await initializeChengduDadieTeam();
     const loadedPlayers = await storage.getPlayersByTeam(teamId);
     setPlayers(loadedPlayers);
   };
 
   const calculateStats = async () => {
-    const teamId = getChengduDadieTeamId();
+    const teamId = await initializeChengduDadieTeam();
     const matches = await storage.getMatchesByTeam(teamId);
     const allPlayers = await storage.getPlayersByTeam(teamId);
     
     // 使用所有比赛计算统计（不过滤 completed）
-    const wins = matches.filter(m => m.score.home > m.score.away).length;
-    const draws = matches.filter(m => m.score.home === m.score.away).length;
-    const losses = matches.filter(m => m.score.home < m.score.away).length;
-    const goalsFor = matches.reduce((sum, m) => sum + m.score.home, 0);
-    const goalsAgainst = matches.reduce((sum, m) => sum + m.score.away, 0);
-    const cleanSheets = matches.filter(m => m.score.away === 0).length;
+    const wins = matches.filter(m => m.scoreHome > m.scoreAway).length;
+    const draws = matches.filter(m => m.scoreHome === m.scoreAway).length;
+    const losses = matches.filter(m => m.scoreHome < m.scoreAway).length;
+    const goalsFor = matches.reduce((sum, m) => sum + m.scoreHome, 0);
+    const goalsAgainst = matches.reduce((sum, m) => sum + m.scoreAway, 0);
+    const cleanSheets = matches.filter(m => m.scoreAway === 0).length;
 
     setTeamStats({
       totalMatches: matches.length,
@@ -116,7 +116,7 @@ export default function StatsPage() {
     }
 
     try {
-      const teamId = getChengduDadieTeamId();
+      const teamId = await initializeChengduDadieTeam();
       
       // 构建 playerStats 数组
       const matchPlayerStats = Object.entries(newMatch.playerStats)
@@ -134,25 +134,27 @@ export default function StatsPage() {
           };
         });
 
-      const match: Match = {
-        id: generateId(),
+      // 创建比赛基本信息
+      const matchData = {
         teamId,
         opponent: newMatch.opponent.trim(),
         date: newMatch.date,
-        location: newMatch.location || '未知',
+        location: newMatch.location || undefined,
         matchType: newMatch.matchType,
         matchNature: newMatch.matchNature,
-        score: {
-          home: newMatch.scoreHome,
-          away: newMatch.scoreAway,
-        },
-        status: 'completed',
-        playerStats: matchPlayerStats,
+        scoreHome: newMatch.scoreHome,
+        scoreAway: newMatch.scoreAway,
+        status: 'completed' as const,
         videos: newMatch.videos,
-        createdAt: Date.now(),
       };
 
-      await storage.addMatch(match);
+      const createdMatch = await storage.addMatch(matchData);
+      
+      // 创建球员统计数据
+      for (const stat of matchPlayerStats) {
+        await storage.addMatchPlayerStat(createdMatch.id, stat);
+      }
+
       await calculateStats();
       setIsAddMatchDialogOpen(false);
       resetMatchForm();

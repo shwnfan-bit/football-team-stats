@@ -21,16 +21,16 @@ export default function HomePage() {
   }, []);
 
   const loadData = async () => {
-    const teamId = getChengduDadieTeamId();
+    const teamId = await initializeChengduDadieTeam();
     const allPlayers = await storage.getPlayersByTeam(teamId);
     const allMatches = await storage.getMatchesByTeam(teamId);
 
     // 计算球队统计
-    const wins = allMatches.filter(m => m.score.home > m.score.away).length;
-    const draws = allMatches.filter(m => m.score.home === m.score.away).length;
-    const losses = allMatches.filter(m => m.score.home < m.score.away).length;
-    const goalsFor = allMatches.reduce((sum, m) => sum + m.score.home, 0);
-    const goalsAgainst = allMatches.reduce((sum, m) => sum + m.score.away, 0);
+    const wins = allMatches.filter(m => m.scoreHome > m.scoreAway).length;
+    const draws = allMatches.filter(m => m.scoreHome === m.scoreAway).length;
+    const losses = allMatches.filter(m => m.scoreHome < m.scoreAway).length;
+    const goalsFor = allMatches.reduce((sum, m) => sum + m.scoreHome, 0);
+    const goalsAgainst = allMatches.reduce((sum, m) => sum + m.scoreAway, 0);
 
     setPlayers(allPlayers);
     setMatches(allMatches);
@@ -170,7 +170,7 @@ export default function HomePage() {
                           <div className="flex justify-between items-center">
                             <span className="font-medium">{match.opponent}</span>
                             <span className="text-2xl font-bold text-red-600 dark:text-red-400">
-                              {match.score.home} - {match.score.away}
+                              {match.scoreHome} - {match.scoreAway}
                             </span>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">

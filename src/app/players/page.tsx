@@ -37,10 +37,10 @@ export default function PlayersPage() {
     })();
   }, []);
 
-  const loadPlayers = () => {
+  const loadPlayers = async () => {
     try {
-      const teamId = getChengduDadieTeamId();
-      const loadedPlayers = storage.getPlayersByTeam(teamId);
+      const teamId = await initializeChengduDadieTeam();
+      const loadedPlayers = await storage.getPlayersByTeam(teamId);
       console.log('加载到的球员数据:', loadedPlayers);
       
       // 过滤掉旧格式的数据（没有 birthday 字段或没有 position 字段的）
@@ -93,7 +93,10 @@ export default function PlayersPage() {
     }
 
     try {
-      const teamId = getChengduDadieTeamId();
+      // 确保球队已初始化
+      const teamId = await initializeChengduDadieTeam();
+      console.log('球队 ID:', teamId);
+      
       const playerData = {
         teamId,
         name: newPlayer.name.trim(),
@@ -107,8 +110,8 @@ export default function PlayersPage() {
       };
 
       console.log('创建球员对象:', playerData);
-      await storage.addPlayer(playerData);
-      console.log('球员已保存到存储');
+      const result = await storage.addPlayer(playerData);
+      console.log('球员已保存到存储，返回结果:', result);
       
       // 重新加载球员列表
       await loadPlayers();
@@ -164,9 +167,14 @@ export default function PlayersPage() {
     }
 
     try {
-      const teamId = getChengduDadieTeamId();
+      // 更新球员时，不修改 teamId，从现有球员获取
+      const currentPlayer = players.find(p => p.id === editingPlayerId);
+      if (!currentPlayer) {
+        alert('找不到要更新的球员');
+        return;
+      }
+
       const updatedPlayerData = {
-        teamId,
         name: newPlayer.name.trim(),
         number: parseInt(newPlayer.number),
         position: newPlayer.position,

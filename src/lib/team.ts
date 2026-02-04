@@ -1,43 +1,50 @@
 import { Team, storage, generateId } from './storage';
 
-const CHENGDU_DADIE_TEAM_ID = 'chengdu-dadie-team';
+const CHENGDU_DADIE_TEAM_NAME = '成都老爹队';
 
-// 成都老爹队固定数据
-export const CHENGDU_DADIE_TEAM: Team = {
-  id: CHENGDU_DADIE_TEAM_ID,
-  name: '成都老爹队',
+// 球队缓存 ID
+let chengduDadieTeamIdCache: string | null = null;
+
+// 成都老爹队数据（用于创建）
+const CHENGDU_DADIE_TEAM_DATA = {
+  name: CHENGDU_DADIE_TEAM_NAME,
   logo: undefined,
   color: '#e53935', // 红色
   foundedYear: 2024,
   coach: '',
-  createdAt: Date.now(),
 };
 
 // 初始化成都老爹队
-export const initializeChengduDadieTeam = async () => {
+export const initializeChengduDadieTeam = async (): Promise<string> => {
+  // 如果已经缓存了 ID，直接返回
+  if (chengduDadieTeamIdCache) {
+    return chengduDadieTeamIdCache;
+  }
+
+  // 查询球队是否存在
   const teams = await storage.getTeams();
-  if (!teams.find(t => t.id === CHENGDU_DADIE_TEAM_ID)) {
-    await storage.addTeam(CHENGDU_DADIE_TEAM);
+  const existingTeam = teams.find(t => t.name === CHENGDU_DADIE_TEAM_NAME);
+
+  if (existingTeam) {
+    chengduDadieTeamIdCache = existingTeam.id;
+    return existingTeam.id;
   }
+
+  // 创建球队（只传递 InsertTeam 需要的字段）
+  const newTeam = await storage.addTeam(CHENGDU_DADIE_TEAM_DATA);
+  chengduDadieTeamIdCache = newTeam.id;
   
-  // 清理旧格式的球员数据（没有 birthday 字段或 position 字段的）
-  try {
-    const players = await storage.getPlayersByTeam(CHENGDU_DADIE_TEAM_ID);
-    const invalidPlayers = players.filter((p: any) => !p.birthday || (!p.position && !p.positions));
-    if (invalidPlayers.length > 0) {
-      console.log('清理旧格式球员数据:', invalidPlayers.length, '个');
-      // 删除旧数据
-      await Promise.all(invalidPlayers.map((p: any) => storage.deletePlayer(p.id)));
-    }
-  } catch (error) {
-    console.error('清理旧数据时出错:', error);
-  }
-  
-  return CHENGDU_DADIE_TEAM_ID;
+  console.log('成都老爹队已创建，ID:', newTeam.id);
+  return newTeam.id;
 };
 
 // 获取成都老爹队 ID
-export const getChengduDadieTeamId = () => CHENGDU_DADIE_TEAM_ID;
+export const getChengduDadieTeamId = (): string => {
+  if (!chengduDadieTeamIdCache) {
+    throw new Error('成都老爹队尚未初始化，请先调用 initializeChengduDadieTeam()');
+  }
+  return chengduDadieTeamIdCache;
+};
 
 // 计算年龄
 export const calculateAge = (birthday: string): number => {
