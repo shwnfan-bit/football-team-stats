@@ -91,9 +91,9 @@ export const matchesApi = {
 // ============ Match Stats API ============
 export const matchStatsApi = {
   getByMatch: (matchId: string) =>
-    request<MatchPlayerStat[]>(`/matches/${matchId}/stats`),
+    request<MatchPlayerStat[]>(`/match-stats/${matchId}`),
   create: (matchId: string, data: Omit<InsertMatchPlayerStat, 'matchId'>) =>
-    request<MatchPlayerStat>(`/matches/${matchId}/stats`, {
+    request<MatchPlayerStat>(`/match-stats/${matchId}`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
