@@ -1,176 +1,195 @@
 'use client';
 
-import { Team, Player, Match, Season } from '@/types';
+import {
+  teamsApi,
+  playersApi,
+  matchesApi,
+  matchStatsApi,
+  seasonsApi,
+} from './api';
+import type {
+  Team,
+  Player,
+  Match,
+  Season,
+  MatchPlayerStat,
+  InsertTeam,
+  UpdateTeam,
+  InsertPlayer,
+  UpdatePlayer,
+  InsertMatch,
+  UpdateMatch,
+  InsertSeason,
+  UpdateSeason,
+} from '@/storage/database';
 
-export type { Team, Player, Match, Season };
+export type {
+  Team,
+  Player,
+  Match,
+  Season,
+  MatchPlayerStat,
+  InsertTeam,
+  UpdateTeam,
+  InsertPlayer,
+  UpdatePlayer,
+  InsertMatch,
+  UpdateMatch,
+  InsertSeason,
+  UpdateSeason,
+};
 
-const STORAGE_KEYS = {
-  TEAMS: 'football_teams',
-  PLAYERS: 'football_players',
-  MATCHES: 'football_matches',
-  SEASONS: 'football_seasons',
-} as const;
-
-// 球队相关存储
+// 数据存储层 - 使用 API 调用
 export const storage = {
-  // Teams
-  getTeams: (): Team[] => {
-    if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(STORAGE_KEYS.TEAMS);
-    return data ? JSON.parse(data) : [];
+  // ==================== Teams ====================
+  getTeams: (): Promise<Team[]> => {
+    return teamsApi.getAll();
   },
 
-  setTeams: (teams: Team[]) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEYS.TEAMS, JSON.stringify(teams));
+  setTeams: async (teams: Team[]): Promise<void> => {
+    // API 模式下不支持批量设置，这个方法保留但不实现
+    console.warn('setTeams is not supported in API mode');
   },
 
-  addTeam: (team: Team) => {
-    const teams = storage.getTeams();
-    teams.push(team);
-    storage.setTeams(teams);
+  addTeam: (team: InsertTeam): Promise<Team> => {
+    return teamsApi.create(team);
   },
 
-  updateTeam: (teamId: string, updatedTeam: Partial<Team>) => {
-    const teams = storage.getTeams();
-    const index = teams.findIndex(t => t.id === teamId);
-    if (index !== -1) {
-      teams[index] = { ...teams[index], ...updatedTeam };
-      storage.setTeams(teams);
-    }
+  updateTeam: (teamId: string, updatedTeam: UpdateTeam): Promise<void> => {
+    return teamsApi.update(teamId, updatedTeam).then(() => {});
   },
 
-  deleteTeam: (teamId: string) => {
-    const teams = storage.getTeams().filter(t => t.id !== teamId);
-    storage.setTeams(teams);
-    // 同时删除该球队的球员和比赛
-    storage.deletePlayersByTeam(teamId);
-    storage.deleteMatchesByTeam(teamId);
+  deleteTeam: (teamId: string): Promise<void> => {
+    return teamsApi.delete(teamId).then(() => {});
   },
 
-  // Players
-  getPlayers: (): Player[] => {
-    if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(STORAGE_KEYS.PLAYERS);
-    const players = data ? JSON.parse(data) : [];
-    console.log('storage.getPlayers 读取到', players.length, '个球员');
-    return players;
+  // ==================== Players ====================
+  getPlayers: (): Promise<Player[]> => {
+    return playersApi.getAll();
   },
 
-  getPlayersByTeam: (teamId: string): Player[] => {
-    return storage.getPlayers().filter(p => p.teamId === teamId);
+  getPlayersByTeam: (teamId: string): Promise<Player[]> => {
+    return playersApi.getByTeam(teamId);
   },
 
-  setPlayers: (players: Player[]) => {
-    if (typeof window === 'undefined') return;
-    console.log('storage.setPlayers 保存', players.length, '个球员');
-    localStorage.setItem(STORAGE_KEYS.PLAYERS, JSON.stringify(players));
-    console.log('storage.setPlayers 已保存到 localStorage');
+  setPlayers: async (players: Player[]): Promise<void> => {
+    // API 模式下不支持批量设置，这个方法保留但不实现
+    console.warn('setPlayers is not supported in API mode');
   },
 
-  addPlayer: (player: Player) => {
-    console.log('storage.addPlayer 开始，当前球员数量:', storage.getPlayers().length);
-    const players = storage.getPlayers();
-    players.push(player);
-    storage.setPlayers(players);
-    console.log('storage.addPlayer 完成，新增球员数量:', storage.getPlayers().length);
-    console.log('保存的球员数据:', player);
+  addPlayer: (player: InsertPlayer): Promise<Player> => {
+    return playersApi.create(player);
   },
 
-  updatePlayer: (playerId: string, updatedPlayer: Partial<Player>) => {
-    const players = storage.getPlayers();
-    const index = players.findIndex(p => p.id === playerId);
-    if (index !== -1) {
-      players[index] = { ...players[index], ...updatedPlayer };
-      storage.setPlayers(players);
-    }
+  updatePlayer: (playerId: string, updatedPlayer: UpdatePlayer): Promise<void> => {
+    return playersApi.update(playerId, updatedPlayer).then(() => {});
   },
 
-  deletePlayer: (playerId: string) => {
-    const players = storage.getPlayers().filter(p => p.id !== playerId);
-    storage.setPlayers(players);
+  deletePlayer: (playerId: string): Promise<void> => {
+    return playersApi.delete(playerId).then(() => {});
   },
 
-  deletePlayersByTeam: (teamId: string) => {
-    const players = storage.getPlayers().filter(p => p.teamId !== teamId);
-    storage.setPlayers(players);
+  deletePlayersByTeam: (teamId: string): Promise<void> => {
+    // API 模式下需要逐个删除
+    return playersApi.getByTeam(teamId).then((players) => {
+      return Promise.all(players.map((p) => playersApi.delete(p.id))).then(() => {});
+    });
   },
 
-  // Matches
-  getMatches: (): Match[] => {
-    if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(STORAGE_KEYS.MATCHES);
-    return data ? JSON.parse(data) : [];
+  // ==================== Matches ====================
+  getMatches: (): Promise<Match[]> => {
+    return matchesApi.getAll();
   },
 
-  getMatchesByTeam: (teamId: string): Match[] => {
-    return storage.getMatches().filter(m => m.teamId === teamId);
+  getMatchesByTeam: (teamId: string): Promise<Match[]> => {
+    return matchesApi.getByTeam(teamId);
   },
 
-  setMatches: (matches: Match[]) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEYS.MATCHES, JSON.stringify(matches));
+  setMatches: async (matches: Match[]): Promise<void> => {
+    // API 模式下不支持批量设置，这个方法保留但不实现
+    console.warn('setMatches is not supported in API mode');
   },
 
-  addMatch: (match: Match) => {
-    const matches = storage.getMatches();
-    matches.push(match);
-    storage.setMatches(matches);
+  addMatch: (match: InsertMatch): Promise<Match> => {
+    return matchesApi.create(match);
   },
 
-  updateMatch: (matchId: string, updatedMatch: Partial<Match>) => {
-    const matches = storage.getMatches();
-    const index = matches.findIndex(m => m.id === matchId);
-    if (index !== -1) {
-      matches[index] = { ...matches[index], ...updatedMatch };
-      storage.setMatches(matches);
-    }
+  updateMatch: (matchId: string, updatedMatch: UpdateMatch): Promise<void> => {
+    return matchesApi.update(matchId, updatedMatch).then(() => {});
   },
 
-  deleteMatch: (matchId: string) => {
-    const matches = storage.getMatches().filter(m => m.id !== matchId);
-    storage.setMatches(matches);
+  deleteMatch: (matchId: string): Promise<void> => {
+    return matchesApi.delete(matchId).then(() => {});
   },
 
-  deleteMatchesByTeam: (teamId: string) => {
-    const matches = storage.getMatches().filter(m => m.teamId !== teamId);
-    storage.setMatches(matches);
+  deleteMatchesByTeam: (teamId: string): Promise<void> => {
+    // API 模式下需要逐个删除
+    return matchesApi.getByTeam(teamId).then((matches) => {
+      return Promise.all(matches.map((m) => matchesApi.delete(m.id))).then(() => {});
+    });
   },
 
-  // Seasons
-  getSeasons: (): Season[] => {
-    if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(STORAGE_KEYS.SEASONS);
-    return data ? JSON.parse(data) : [];
+  // ==================== Match Stats ====================
+  getMatchPlayerStats: (matchId: string): Promise<MatchPlayerStat[]> => {
+    return matchStatsApi.getByMatch(matchId);
   },
 
-  getSeasonsByTeam: (teamId: string): Season[] => {
-    return storage.getSeasons().filter(s => s.teamId === teamId);
+  setMatchPlayerStats: async (stats: MatchPlayerStat[]): Promise<void> => {
+    // API 模式下不支持批量设置，这个方法保留但不实现
+    console.warn('setMatchPlayerStats is not supported in API mode');
   },
 
-  setSeasons: (seasons: Season[]) => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(STORAGE_KEYS.SEASONS, JSON.stringify(seasons));
+  addMatchPlayerStat: (
+    matchId: string,
+    stat: Omit<InsertMatchPlayerStat, 'matchId'>
+  ): Promise<MatchPlayerStat> => {
+    return matchStatsApi.create(matchId, stat);
   },
 
-  addSeason: (season: Season) => {
-    const seasons = storage.getSeasons();
-    seasons.push(season);
-    storage.setSeasons(seasons);
+  updateMatchPlayerStat: async (
+    statId: string,
+    updatedStat: any
+  ): Promise<void> => {
+    // API 模式下暂不支持更新单个统计
+    console.warn('updateMatchPlayerStat is not supported yet');
   },
 
-  updateSeason: (seasonId: string, updatedSeason: Partial<Season>) => {
-    const seasons = storage.getSeasons();
-    const index = seasons.findIndex(s => s.id === seasonId);
-    if (index !== -1) {
-      seasons[index] = { ...seasons[index], ...updatedSeason };
-      storage.setSeasons(seasons);
-    }
+  deleteMatchPlayerStat: (statId: string): Promise<void> => {
+    // API 模式下暂不支持删除单个统计
+    console.warn('deleteMatchPlayerStat is not supported yet');
   },
 
-  deleteSeason: (seasonId: string) => {
-    const seasons = storage.getSeasons().filter(s => s.id !== seasonId);
-    storage.setSeasons(seasons);
+  // ==================== Seasons ====================
+  getSeasons: (): Promise<Season[]> => {
+    return seasonsApi.getAll();
+  },
+
+  getSeasonsByTeam: (teamId: string): Promise<Season[]> => {
+    return seasonsApi.getAll({ teamId });
+  },
+
+  setSeasons: async (seasons: Season[]): Promise<void> => {
+    // API 模式下不支持批量设置，这个方法保留但不实现
+    console.warn('setSeasons is not supported in API mode');
+  },
+
+  addSeason: (season: InsertSeason): Promise<Season> => {
+    return seasonsApi.create(season);
+  },
+
+  updateSeason: (seasonId: string, updatedSeason: UpdateSeason): Promise<void> => {
+    return seasonsApi.update(seasonId, updatedSeason).then(() => {});
+  },
+
+  deleteSeason: (seasonId: string): Promise<void> => {
+    return seasonsApi.delete(seasonId).then(() => {});
+  },
+
+  deleteSeasonsByTeam: (teamId: string): Promise<void> => {
+    // API 模式下需要逐个删除
+    return seasonsApi.getAll({ teamId }).then((seasons) => {
+      return Promise.all(seasons.map((s) => seasonsApi.delete(s.id))).then(() => {});
+    });
   },
 };
 

@@ -69,7 +69,7 @@ export default function PlayersPage() {
     }
   };
 
-  const handleAddPlayer = () => {
+  const handleAddPlayer = async () => {
     console.log('开始添加球员:', newPlayer);
     
     // 验证必填字段
@@ -107,11 +107,11 @@ export default function PlayersPage() {
       };
 
       console.log('创建球员对象:', player);
-      storage.addPlayer(player);
+      await storage.addPlayer(player);
       console.log('球员已保存到存储');
       
       // 重新加载球员列表
-      loadPlayers();
+      await loadPlayers();
       
       setIsAddDialogOpen(false);
       resetForm();
@@ -140,7 +140,7 @@ export default function PlayersPage() {
     }
   };
 
-  const handleUpdatePlayer = () => {
+  const handleUpdatePlayer = async () => {
     if (!editingPlayerId) return;
 
     console.log('开始更新球员:', newPlayer);
@@ -180,11 +180,11 @@ export default function PlayersPage() {
       };
 
       console.log('更新球员对象:', updatedPlayer);
-      storage.updatePlayer(editingPlayerId, updatedPlayer);
+      await storage.updatePlayer(editingPlayerId, updatedPlayer);
       console.log('球员已更新');
       
       // 重新加载球员列表
-      loadPlayers();
+      await loadPlayers();
       
       setIsEditDialogOpen(false);
       setEditingPlayerId(null);
@@ -196,11 +196,11 @@ export default function PlayersPage() {
     }
   };
 
-  const handleDeletePlayer = (playerId: string) => {
+  const handleDeletePlayer = async (playerId: string) => {
     if (confirm('确定要删除这个球员吗？')) {
       try {
-        storage.deletePlayer(playerId);
-        loadPlayers();
+        await storage.deletePlayer(playerId);
+        await loadPlayers();
       } catch (error) {
         console.error('删除球员失败:', error);
         alert('删除球员失败: ' + (error as Error).message);
@@ -503,10 +503,10 @@ export default function PlayersPage() {
                           variant="outline"
                           size="sm"
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                          onClick={() => {
+                          onClick={async () => {
                             if (confirm(`确定要删除 ${player.name} 吗？`)) {
-                              storage.deletePlayer(player.id);
-                              loadPlayers();
+                              await storage.deletePlayer(player.id);
+                              await loadPlayers();
                             }
                           }}
                         >

@@ -38,10 +38,10 @@ export default function MatchesPage() {
     loadPlayers();
   }, []);
 
-  const loadMatches = () => {
+  const loadMatches = async () => {
     try {
       const teamId = getChengduDadieTeamId();
-      const loadedMatches = storage.getMatchesByTeam(teamId);
+      const loadedMatches = await storage.getMatchesByTeam(teamId);
       // 按日期降序排列（最新的在前）
       const sortedMatches = loadedMatches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setMatches(sortedMatches);
@@ -51,10 +51,10 @@ export default function MatchesPage() {
     }
   };
 
-  const loadPlayers = () => {
+  const loadPlayers = async () => {
     try {
       const teamId = getChengduDadieTeamId();
-      const loadedPlayers = storage.getPlayersByTeam(teamId);
+      const loadedPlayers = await storage.getPlayersByTeam(teamId);
       setPlayers(loadedPlayers);
     } catch (error) {
       console.error('加载球员数据失败:', error);
@@ -184,7 +184,7 @@ export default function MatchesPage() {
     }));
   };
 
-  const handleUpdateMatch = () => {
+  const handleUpdateMatch = async () => {
     if (!editingMatchId) return;
 
     if (!editMatch.opponent.trim() || !editMatch.date) {
@@ -229,8 +229,8 @@ export default function MatchesPage() {
         createdAt: Date.now(),
       };
 
-      storage.updateMatch(editingMatchId, updatedMatch);
-      loadMatches();
+      await storage.updateMatch(editingMatchId, updatedMatch);
+      await loadMatches();
       setIsEditDialogOpen(false);
       setEditingMatchId(null);
     } catch (error) {

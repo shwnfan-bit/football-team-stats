@@ -38,16 +38,16 @@ export default function StatsPage() {
     loadPlayers();
   }, []);
 
-  const loadPlayers = () => {
+  const loadPlayers = async () => {
     const teamId = getChengduDadieTeamId();
-    const loadedPlayers = storage.getPlayersByTeam(teamId);
+    const loadedPlayers = await storage.getPlayersByTeam(teamId);
     setPlayers(loadedPlayers);
   };
 
-  const calculateStats = () => {
+  const calculateStats = async () => {
     const teamId = getChengduDadieTeamId();
-    const matches = storage.getMatchesByTeam(teamId);
-    const allPlayers = storage.getPlayersByTeam(teamId);
+    const matches = await storage.getMatchesByTeam(teamId);
+    const allPlayers = await storage.getPlayersByTeam(teamId);
     
     // 使用所有比赛计算统计（不过滤 completed）
     const wins = matches.filter(m => m.score.home > m.score.away).length;
@@ -107,7 +107,7 @@ export default function StatsPage() {
     setPlayerStats(stats);
   };
 
-  const handleAddMatch = () => {
+  const handleAddMatch = async () => {
     if (!newMatch.opponent.trim() || !newMatch.date) {
       alert('请填写完整的比赛信息');
       return;
@@ -150,8 +150,8 @@ export default function StatsPage() {
         createdAt: Date.now(),
       };
 
-      storage.addMatch(match);
-      calculateStats();
+      await storage.addMatch(match);
+      await calculateStats();
       setIsAddMatchDialogOpen(false);
       resetMatchForm();
     } catch (error) {
