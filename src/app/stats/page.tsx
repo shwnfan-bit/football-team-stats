@@ -107,10 +107,24 @@ export default function StatsPage() {
       };
     });
 
-    // 过滤掉进球和助攻都为0的球员
-    const filteredStats = stats.filter(stat => stat.goals > 0 || stat.assists > 0);
+    // 过滤掉进球和助攻都为0的球员（用于射手榜和助攻榜）
+    const filteredPlayerStats = stats.filter(stat => stat.goals > 0 || stat.assists > 0);
 
-    setPlayerStats(filteredStats);
+    // 过滤掉出勤为0的球员（用于出勤榜）
+    const allPlayerStats = stats.filter(stat => stat.matchesPlayed > 0);
+
+    setPlayerStats(filteredPlayerStats);
+    setTeamStats({
+      totalMatches: matches.length,
+      wins,
+      draws,
+      losses,
+      goalsFor,
+      goalsAgainst,
+      cleanSheets,
+      winRate: matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0,
+      allPlayerStats, // 保存所有球员统计用于出勤榜
+    });
   };
 
   const handleAddMatch = async () => {
@@ -163,9 +177,9 @@ export default function StatsPage() {
       setIsAddMatchDialogOpen(false);
       resetMatchForm();
       
-      // 注释掉后台刷新，避免阻塞UI
-      // calculateStats().catch(console.error);
-      // loadPlayers().catch(console.error);
+      // 重新计算统计数据
+      await calculateStats();
+      await loadPlayers();
     } catch (error) {
       console.error('添加比赛失败:', error);
       alert('添加比赛失败: ' + (error as Error).message);
@@ -230,9 +244,9 @@ export default function StatsPage() {
     }));
   };
 
-  const topScorers = [...playerStats].sort((a, b) => b.goals - a.goals).slice(0, 5);
-  const topAssists = [...playerStats].sort((a, b) => b.assists - a.assists).slice(0, 5);
-  const topAttendance = [...playerStats].sort((a, b) => b.matchesPlayed - a.matchesPlayed).slice(0, 5);
+  const topScorers = [...playerStats].sort((a, b) => b.goals - a.goals).filter(p => p.goals > 0);
+  const topAssists = [...playerStats].sort((a, b) => b.assists - a.assists).filter(p => p.assists > 0);
+  const topAttendance = [...(teamStats?.allPlayerStats || [])].sort((a, b) => b.matchesPlayed - a.matchesPlayed).filter(p => p.matchesPlayed > 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-slate-100 dark:from-red-950/20 dark:to-slate-900 pb-20 md:pb-0 pt-16 md:pt-16">

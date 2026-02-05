@@ -39,3 +39,18 @@ export const POSITION_LABELS: Record<PlayerPosition, string> = {
 };
 
 export type PlayerPosition = 'goalkeeper' | 'defender' | 'midfielder' | 'forward';
+
+// 球员赛季统计类型
+export interface PlayerSeasonStats {
+  playerId: string;
+  playerName: string;
+  playerNumber: number;
+  position: string;
+  matchesPlayed: number;
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+  avgRating: number;
+  minutesPlayed: number;
+}
