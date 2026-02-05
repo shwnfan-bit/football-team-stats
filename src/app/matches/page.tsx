@@ -133,8 +133,8 @@ export default function MatchesPage() {
       location: match.location || '',
       matchType: match.matchType,
       matchNature: match.matchNature,
-      scoreHome: match.score.home,
-      scoreAway: match.score.away,
+      scoreHome: match.scoreHome,
+      scoreAway: match.scoreAway,
       playerStats: playerStatsMap,
       videos: match.videos || [],
     });
