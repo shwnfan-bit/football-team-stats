@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { storage } from '@/lib/storage';
 import { initializeChengduDadieTeam, getChengduDadieTeamId } from '@/lib/team';
-import { Match, Player, PlayerPosition, POSITION_LABELS } from '@/types';
+import { Match, Player, PlayerPosition, POSITION_LABELS, MatchPlayerStat } from '@/types';
 
 export default function MatchesPage() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -365,54 +365,70 @@ export default function MatchesPage() {
                       {match.playerStats.length === 0 ? (
                         <p className="text-sm text-slate-500 text-center py-4">暂无球员数据</p>
                       ) : (
-                        <div className="bg-white dark:bg-slate-900 rounded-lg border overflow-hidden">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-b bg-slate-100 dark:bg-slate-800">
-                                <th className="px-4 py-2 text-left text-sm font-semibold">上场球员</th>
-                                <th className="px-4 py-2 text-center text-sm font-semibold">进球</th>
-                                <th className="px-4 py-2 text-center text-sm font-semibold">助攻</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {match.playerStats
-                                .filter(ps => ps.isPlaying)
-                                .sort((a, b) => b.goals - a.goals || b.assists - a.assists)
-                                .map((ps) => (
-                                  <tr key={ps.playerId} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
-                                    <td className="px-4 py-2">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-slate-500">#{ps.playerNumber}</span>
-                                        <span className="font-medium">{ps.playerName}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-2 text-center">
-                                      {ps.goals > 0 ? (
-                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-sm font-bold">
-                                          <Target className="w-3 h-3" />
-                                          {ps.goals}
-                                        </span>
-                                      ) : null}
-                                    </td>
-                                    <td className="px-4 py-2 text-center">
-                                      {ps.assists > 0 ? (
-                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-bold">
-                                          <Award className="w-3 h-3" />
-                                          {ps.assists}
-                                        </span>
-                                      ) : null}
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
+                        (() => {
+                          // 去重并合并同一球员的数据
+                          const uniqueStatsMap = new Map<string, MatchPlayerStat>();
+                          match.playerStats.forEach(ps => {
+                            if (!ps.isPlaying) return;
+                            const existing = uniqueStatsMap.get(ps.playerId);
+                            if (existing) {
+                              existing.goals += ps.goals;
+                              existing.assists += ps.assists;
+                            } else {
+                              uniqueStatsMap.set(ps.playerId, { ...ps });
+                            }
+                          });
+                          const uniqueStats = Array.from(uniqueStatsMap.values())
+                            .sort((a, b) => b.goals - a.goals || b.assists - a.assists);
                           
-                          {match.playerStats.filter(ps => ps.isPlaying).length === 0 && (
-                            <p className="text-sm text-slate-500 text-center py-4">
-                              没有球员上场
-                            </p>
-                          )}
-                        </div>
+                          return (
+                            <div className="bg-white dark:bg-slate-900 rounded-lg border overflow-hidden">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="border-b bg-slate-100 dark:bg-slate-800">
+                                    <th className="px-4 py-2 text-left text-sm font-semibold">上场球员</th>
+                                    <th className="px-4 py-2 text-center text-sm font-semibold">进球</th>
+                                    <th className="px-4 py-2 text-center text-sm font-semibold">助攻</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {uniqueStats.map((ps) => (
+                                    <tr key={ps.playerId} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
+                                      <td className="px-4 py-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-slate-500">#{ps.playerNumber}</span>
+                                          <span className="font-medium">{ps.playerName}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-2 text-center">
+                                        {ps.goals > 0 ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-sm font-bold">
+                                            <Target className="w-3 h-3" />
+                                            {ps.goals}
+                                          </span>
+                                        ) : null}
+                                      </td>
+                                      <td className="px-4 py-2 text-center">
+                                        {ps.assists > 0 ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-bold">
+                                            <Award className="w-3 h-3" />
+                                            {ps.assists}
+                                          </span>
+                                        ) : null}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              
+                              {uniqueStats.length === 0 && (
+                                <p className="text-sm text-slate-500 text-center py-4">
+                                  没有球员上场
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()
                       )}
 
                       {/* 比赛录像 */}

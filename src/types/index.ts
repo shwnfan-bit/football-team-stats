@@ -5,7 +5,6 @@
 export type {
   Team,
   Player,
-  Match as DatabaseMatch,
   Season,
   MatchPlayerStat,
   InsertTeam,
@@ -16,19 +15,11 @@ export type {
   UpdateMatch,
   InsertSeason,
   UpdateSeason,
-} from '@/storage/database';
+} from '@/storage/database/shared/schema';
 
 export type {
   InsertMatchPlayerStat,
   UpdateMatchPlayerStat,
-} from '@/storage/database/shared/schema';
-
-// 为了向后兼容，重新导出一些辅助类型
-export type {
-  Team,
-  Player,
-  Season,
-  MatchPlayerStat,
 } from '@/storage/database/shared/schema';
 
 // 数据库的 Match 类型（不包含 playerStats）
