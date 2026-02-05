@@ -20,6 +20,7 @@ export default function MatchesPage() {
   const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [editNewVideoUrl, setEditNewVideoUrl] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
   const [editMatch, setEditMatch] = useState({
     opponent: '',
     date: '',
@@ -186,13 +187,24 @@ export default function MatchesPage() {
     }));
   };
 
+  // 生成临时 UUID 用于乐观更新
+  const generateTempId = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+
   const handleUpdateMatch = async () => {
-    if (!editingMatchId) return;
+    if (!editingMatchId || isUpdating) return;
 
     if (!editMatch.opponent.trim() || !editMatch.date) {
       alert('请填写完整的比赛信息');
       return;
     }
+
+    setIsUpdating(true);
 
     try {
       // 更新比赛基本信息
@@ -210,7 +222,6 @@ export default function MatchesPage() {
 
       await storage.updateMatch(editingMatchId, updatedMatchData);
 
-      // 删除旧的球员统计，然后添加新的
       // 构建新的球员统计数据
       const matchPlayerStats = Object.entries(editMatch.playerStats)
         .filter(([_, stats]) => stats.isPlaying)
@@ -234,16 +245,46 @@ export default function MatchesPage() {
       for (const stat of matchPlayerStats) {
         await storage.addMatchPlayerStat(editingMatchId, stat);
       }
+
+      // 乐观更新 UI
+      const updatedMatches = matches.map(match => {
+        if (match.id === editingMatchId) {
+          return {
+            ...match,
+            opponent: updatedMatchData.opponent,
+            date: new Date(updatedMatchData.date),
+            location: updatedMatchData.location,
+            matchType: updatedMatchData.matchType,
+            matchNature: updatedMatchData.matchNature,
+            scoreHome: updatedMatchData.scoreHome,
+            scoreAway: updatedMatchData.scoreAway,
+            status: updatedMatchData.status,
+            videos: updatedMatchData.videos,
+            playerStats: matchPlayerStats.map((stat) => ({
+              id: generateTempId(),
+              matchId: editingMatchId,
+              ...stat,
+              createdAt: new Date(),
+            })),
+          };
+        }
+        return match;
+      }) as Match[];
+      setMatches(updatedMatches);
       
-      // 立即关闭对话框
+      // 关闭对话框
       setIsEditDialogOpen(false);
       setEditingMatchId(null);
       
-      // 注释掉后台刷新，避免阻塞UI
-      // loadMatches().catch(console.error);
+      // 后台刷新以确保数据一致性
+      await loadMatches();
     } catch (error) {
       console.error('更新比赛失败:', error);
       alert('更新比赛失败: ' + (error as Error).message);
+      // 更新失败后，重新加载数据以恢复正确状态
+      await loadMatches();
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -678,8 +719,12 @@ export default function MatchesPage() {
               </div>
             </div>
 
-            <Button onClick={handleUpdateMatch} className="w-full bg-red-700 hover:bg-red-800">
-              保存修改
+            <Button 
+              onClick={handleUpdateMatch} 
+              className="w-full bg-red-700 hover:bg-red-800"
+              disabled={isUpdating}
+            >
+              {isUpdating ? '保存中...' : '保存修改'}
             </Button>
           </div>
         </DialogContent>
