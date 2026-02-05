@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { isAuthenticated, logout as authLogout } from '@/lib/auth';
+import { isAuthenticated as checkIsAuthenticated, login as authLogin, logout as authLogout } from '@/lib/auth';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -19,7 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 检查登录状态
   useEffect(() => {
     const checkAuth = () => {
-      setIsAuthenticated(authIsAuthenticated());
+      setIsAuthenticated(checkIsAuthenticated());
       setIsLoading(false);
     };
     
@@ -37,7 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (password: string) => {
-    const { login: authLogin } = require('@/lib/auth');
     const success = authLogin(password);
     if (success) {
       setIsAuthenticated(true);
