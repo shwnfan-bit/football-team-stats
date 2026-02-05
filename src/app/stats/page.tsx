@@ -72,8 +72,9 @@ export default function StatsPage() {
 
     // 计算球员统计
     const stats: PlayerSeasonStats[] = allPlayers.map(player => {
+      // 只计算上场的比赛（isPlaying: true）
       const playerMatches = matches.filter(m => 
-        m.playerStats.some(ps => ps.playerId === player.id)
+        m.playerStats.some(ps => ps.playerId === player.id && ps.isPlaying)
       );
       
       let goals = 0;
@@ -106,7 +107,10 @@ export default function StatsPage() {
       };
     });
 
-    setPlayerStats(stats);
+    // 过滤掉进球和助攻都为0的球员
+    const filteredStats = stats.filter(stat => stat.goals > 0 || stat.assists > 0);
+
+    setPlayerStats(filteredStats);
   };
 
   const handleAddMatch = async () => {
