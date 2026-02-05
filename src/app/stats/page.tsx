@@ -515,8 +515,8 @@ export default function StatsPage() {
                     icon={<Target className="h-4 w-4" />}
                   />
                   <StatCard
-                    title="零封场次"
-                    value={teamStats.cleanSheets}
+                    title="总失球"
+                    value={teamStats.goalsAgainst}
                     icon={<Users className="h-4 w-4" />}
                   />
                 </div>
