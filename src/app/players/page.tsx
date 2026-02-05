@@ -342,10 +342,24 @@ export default function PlayersPage() {
     }
   };
 
-  // 按照号码排序球员（使用 useMemo 优化性能）
-  const sortedPlayers = useMemo(() => {
-    return [...players].sort((a, b) => a.number - b.number);
+  // 按位置分组并排序球员
+  const groupedPlayers = useMemo(() => {
+    const positionOrder: PlayerPosition[] = ['goalkeeper', 'defender', 'midfielder', 'forward'];
+    
+    // 按位置分组
+    const groups = positionOrder.map(position => ({
+      position,
+      label: POSITION_LABELS[position],
+      players: players
+        .filter(p => p.position === position)
+        .sort((a, b) => a.number - b.number)
+    }));
+    
+    return groups;
   }, [players]);
+
+  // 计算总球员数（用于判断是否显示空状态）
+  const totalPlayers = players.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -502,68 +516,79 @@ export default function PlayersPage() {
               <DialogHeader>
                 <DialogTitle>管理球员</DialogTitle>
               </DialogHeader>
-              <div className="space-y-2">
-                {sortedPlayers.length === 0 ? (
+              <div className="space-y-4">
+                {totalPlayers === 0 ? (
                   <p className="text-center text-slate-500 py-8">暂无球员</p>
                 ) : (
-                  sortedPlayers.map((player) => (
-                    <div
-                      key={player.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                      <div className="flex items-center gap-3">
-                        {player.photo ? (
-                          <img
-                            src={player.photo}
-                            alt={player.name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded flex items-center justify-center">
-                            <User className="w-6 h-6 text-slate-400" />
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-medium flex items-center gap-2">
-                            #{player.number} {player.name}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {POSITION_LABELS[player.position]} {player.isCaptain && '(队长)'}
-                          </div>
+                  groupedPlayers.map((group) => (
+                    group.players.length > 0 && (
+                      <div key={group.position}>
+                        <h3 className="font-semibold text-sm text-slate-600 dark:text-slate-400 mb-2">
+                          {group.label} ({group.players.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {group.players.map((player) => (
+                            <div
+                              key={player.id}
+                              className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
+                            >
+                              <div className="flex items-center gap-3">
+                                {player.photo ? (
+                                  <img
+                                    src={player.photo}
+                                    alt={player.name}
+                                    className="w-12 h-12 object-cover rounded"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded flex items-center justify-center">
+                                    <User className="w-6 h-6 text-slate-400" />
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="font-medium flex items-center gap-2">
+                                    #{player.number} {player.name}
+                                  </div>
+                                  <div className="text-xs text-slate-500">
+                                    {player.isCaptain && '队长'}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setIsManageDialogOpen(false);
+                                    handleEditPlayer(player.id);
+                                  }}
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                  onClick={async () => {
+                                    if (confirm(`确定要删除 ${player.name} 吗？`)) {
+                                      try {
+                                        await storage.deletePlayer(player.id);
+                                        // 立即从列表中移除（乐观更新）
+                                        setPlayers(prev => prev.filter(p => p.id !== player.id));
+                                      } catch (error) {
+                                        console.error('删除球员失败:', error);
+                                        alert('删除球员失败: ' + (error as Error).message);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setIsManageDialogOpen(false);
-                            handleEditPlayer(player.id);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                          onClick={async () => {
-                            if (confirm(`确定要删除 ${player.name} 吗？`)) {
-                              try {
-                                await storage.deletePlayer(player.id);
-                                // 立即从列表中移除（乐观更新）
-                                setPlayers(prev => prev.filter(p => p.id !== player.id));
-                              } catch (error) {
-                                console.error('删除球员失败:', error);
-                                alert('删除球员失败: ' + (error as Error).message);
-                              }
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    )
                   ))
                 )}
               </div>
@@ -657,7 +682,7 @@ export default function PlayersPage() {
         </div>
 
         {/* 球员列表 */}
-        {sortedPlayers.length === 0 ? (
+        {totalPlayers === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <User className="w-16 h-16 mx-auto mb-4 text-slate-400" />
@@ -666,51 +691,69 @@ export default function PlayersPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sortedPlayers.map((player) => {
-              const age = calculateAge(player.birthday);
-              return (
-                <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  {/* 球员照片 - 5:4 比例，无圆角，占满红色区域 */}
-                  <div
-                    className="relative w-full pt-[80%] bg-red-700 dark:bg-red-800"
-                    style={{ aspectRatio: '5/4' }}
-                  >
-                    {player.photo ? (
-                      <img
-                        src={player.photo}
-                        alt={player.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center bg-red-700 dark:bg-red-800">
-                        <User className="w-24 h-24 text-red-600/50 dark:text-red-900/50" />
-                      </div>
-                    )}
-                    {/* 队长标识 */}
-                    {player.isCaptain && (
-                      <div className="absolute top-2 right-2 bg-yellow-500 text-white p-1.5 rounded-full">
-                        <Shield className="w-5 h-5" />
-                      </div>
-                    )}
+          <div className="space-y-8">
+            {groupedPlayers.map((group) => (
+              group.players.length > 0 && (
+                <div key={group.position}>
+                  {/* 位置标题 */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-700"></div>
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200 px-4">
+                      {group.label} ({group.players.length})
+                    </h2>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-700"></div>
                   </div>
+                  
+                  {/* 该位置的球员网格 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {group.players.map((player) => {
+                      const age = calculateAge(player.birthday);
+                      return (
+                        <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                          {/* 球员照片 - 5:4 比例，无圆角，占满红色区域 */}
+                          <div
+                            className="relative w-full pt-[80%] bg-red-700 dark:bg-red-800"
+                            style={{ aspectRatio: '5/4' }}
+                          >
+                            {player.photo ? (
+                              <img
+                                src={player.photo}
+                                alt={player.name}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center bg-red-700 dark:bg-red-800">
+                                <User className="w-24 h-24 text-red-600/50 dark:text-red-900/50" />
+                              </div>
+                            )}
+                            {/* 队长标识 */}
+                            {player.isCaptain && (
+                              <div className="absolute top-2 right-2 bg-yellow-500 text-white p-1.5 rounded-full">
+                                <Shield className="w-5 h-5" />
+                              </div>
+                            )}
+                          </div>
 
-                  <CardContent className="p-3">
-                    {/* 姓名和号码在一排显示 */}
-                    <div className="flex justify-between items-center">
-                      {/* 球员姓名 - 靠左 */}
-                      <div className="text-2xl font-bold">
-                        {player.name}
-                      </div>
-                      {/* 球员号码 - 靠右，去除"#"号 */}
-                      <div className="text-2xl font-bold text-red-700 dark:text-red-400">
-                        {player.number}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                          <CardContent className="p-3">
+                            {/* 姓名和号码在一排显示 */}
+                            <div className="flex justify-between items-center">
+                              {/* 球员姓名 - 靠左 */}
+                              <div className="text-2xl font-bold">
+                                {player.name}
+                              </div>
+                              {/* 球员号码 - 靠右，去除"#"号 */}
+                              <div className="text-2xl font-bold text-red-700 dark:text-red-400">
+                                {player.number}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )
+            ))}
           </div>
         )}
 
