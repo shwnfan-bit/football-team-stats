@@ -105,8 +105,8 @@ export default function PlayersPage() {
       setIsAddDialogOpen(false);
       resetForm();
       
-      // 后台异步刷新数据（确保数据是最新的）
-      loadPlayers().catch(console.error);
+      // 注释掉后台刷新，避免阻塞UI
+      // loadPlayers().catch(console.error);
     } catch (error) {
       console.error('添加球员失败:', error);
       alert('添加球员失败: ' + (error as Error).message);
@@ -188,8 +188,8 @@ export default function PlayersPage() {
       setEditingPlayerId(null);
       resetForm();
       
-      // 后台异步刷新数据
-      loadPlayers().catch(console.error);
+      // 注释掉后台刷新，避免阻塞UI
+      // loadPlayers().catch(console.error);
     } catch (error) {
       console.error('更新球员失败:', error);
       alert('更新球员失败: ' + (error as Error).message);
@@ -204,8 +204,8 @@ export default function PlayersPage() {
         // 立即从列表中移除（乐观更新）
         setPlayers(prev => prev.filter(p => p.id !== playerId));
         
-        // 后台异步刷新数据
-        loadPlayers().catch(console.error);
+        // 注释掉后台刷新，避免阻塞UI
+        // loadPlayers().catch(console.error);
       } catch (error) {
         console.error('删除球员失败:', error);
         alert('删除球员失败: ' + (error as Error).message);

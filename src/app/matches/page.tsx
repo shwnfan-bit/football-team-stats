@@ -239,8 +239,8 @@ export default function MatchesPage() {
       setIsEditDialogOpen(false);
       setEditingMatchId(null);
       
-      // 后台异步刷新数据
-      loadMatches().catch(console.error);
+      // 注释掉后台刷新，避免阻塞UI
+      // loadMatches().catch(console.error);
     } catch (error) {
       console.error('更新比赛失败:', error);
       alert('更新比赛失败: ' + (error as Error).message);

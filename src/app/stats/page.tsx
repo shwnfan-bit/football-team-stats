@@ -159,9 +159,9 @@ export default function StatsPage() {
       setIsAddMatchDialogOpen(false);
       resetMatchForm();
       
-      // 后台异步刷新数据
-      calculateStats().catch(console.error);
-      loadPlayers().catch(console.error);
+      // 注释掉后台刷新，避免阻塞UI
+      // calculateStats().catch(console.error);
+      // loadPlayers().catch(console.error);
     } catch (error) {
       console.error('添加比赛失败:', error);
       alert('添加比赛失败: ' + (error as Error).message);
