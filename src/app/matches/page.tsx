@@ -365,35 +365,47 @@ export default function MatchesPage() {
                       {match.playerStats.length === 0 ? (
                         <p className="text-sm text-slate-500 text-center py-4">暂无球员数据</p>
                       ) : (
-                        <div className="grid gap-2">
-                          {match.playerStats
-                            .filter(ps => ps.isPlaying && (ps.goals > 0 || ps.assists > 0))
-                            .sort((a, b) => b.goals - a.goals || b.assists - a.assists)
-                            .map((ps) => (
-                              <div
-                                key={ps.playerId}
-                                className="flex items-center justify-between p-2 bg-white dark:bg-slate-900 rounded-lg border"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">#{ps.playerNumber}</span>
-                                  <span>{ps.playerName}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  {ps.goals > 0 && (
-                                    <div className="flex items-center gap-1 text-red-600 dark:text-red-400">
-                                      <Target className="w-4 h-4" />
-                                      <span className="font-bold">{ps.goals}</span>
-                                    </div>
-                                  )}
-                                  {ps.assists > 0 && (
-                                    <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                                      <Award className="w-4 h-4" />
-                                      <span className="font-bold">{ps.assists}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                        <div className="bg-white dark:bg-slate-900 rounded-lg border overflow-hidden">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b bg-slate-100 dark:bg-slate-800">
+                                <th className="px-4 py-2 text-left text-sm font-semibold">上场球员</th>
+                                <th className="px-4 py-2 text-center text-sm font-semibold">进球</th>
+                                <th className="px-4 py-2 text-center text-sm font-semibold">助攻</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {match.playerStats
+                                .filter(ps => ps.isPlaying)
+                                .sort((a, b) => b.goals - a.goals || b.assists - a.assists)
+                                .map((ps) => (
+                                  <tr key={ps.playerId} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800">
+                                    <td className="px-4 py-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-slate-500">#{ps.playerNumber}</span>
+                                        <span className="font-medium">{ps.playerName}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-2 text-center">
+                                      {ps.goals > 0 ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-sm font-bold">
+                                          <Target className="w-3 h-3" />
+                                          {ps.goals}
+                                        </span>
+                                      ) : null}
+                                    </td>
+                                    <td className="px-4 py-2 text-center">
+                                      {ps.assists > 0 ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm font-bold">
+                                          <Award className="w-3 h-3" />
+                                          {ps.assists}
+                                        </span>
+                                      ) : null}
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
                           
                           {match.playerStats.filter(ps => ps.isPlaying).length === 0 && (
                             <p className="text-sm text-slate-500 text-center py-4">
