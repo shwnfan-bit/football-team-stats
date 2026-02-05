@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { storage, generateId } from '@/lib/storage';
 import { initializeChengduDadieTeam, getChengduDadieTeamId } from '@/lib/team';
+import { useAuth } from '@/contexts/AuthContext';
 import { Match, Player, PlayerSeasonStats, PlayerPosition, POSITION_LABELS } from '@/types';
 
 export default function StatsPage() {
+  const { isAuthenticated } = useAuth();
   const [playerStats, setPlayerStats] = useState<PlayerSeasonStats[]>([]);
   const [teamStats, setTeamStats] = useState<any>(null);
   const [isAddMatchDialogOpen, setIsAddMatchDialogOpen] = useState(false);
@@ -261,21 +263,22 @@ export default function StatsPage() {
               成都老爹队数据分析
             </p>
           </div>
-          <Dialog open={isAddMatchDialogOpen} onOpenChange={setIsAddMatchDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-red-700 hover:bg-red-800 text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                录入比赛
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>录入比赛</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="match-opponent">对手 *</Label>
+          {isAuthenticated && (
+            <Dialog open={isAddMatchDialogOpen} onOpenChange={setIsAddMatchDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-red-700 hover:bg-red-800 text-white">
+                  <Plus className="w-4 h-4 mr-2" />
+                  录入比赛
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>录入比赛</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="match-opponent">对手 *</Label>
                     <Input
                       id="match-opponent"
                       value={newMatch.opponent}
@@ -485,6 +488,7 @@ export default function StatsPage() {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         {/* Team Stats */}

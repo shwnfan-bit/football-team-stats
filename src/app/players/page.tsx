@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { storage, generateId } from '@/lib/storage';
 import { initializeChengduDadieTeam, getChengduDadieTeamId, calculateAge } from '@/lib/team';
 import { cacheManager } from '@/lib/dataCache';
+import { useAuth } from '@/contexts/AuthContext';
 import { Player, PlayerPosition, POSITION_LABELS } from '@/types';
 
 export default function PlayersPage() {
+  const { isAuthenticated } = useAuth();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -398,24 +400,25 @@ export default function PlayersPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* 添加球员和管理球员按钮 */}
-        <div className="mb-8 flex gap-3">
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-red-700 hover:bg-red-800 text-white flex-1 md:flex-none">
-                <Plus className="w-5 h-5 mr-2" />
-                添加球员
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>添加新球员</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label htmlFor="add-name">姓名 *</Label>
-                  <Input
-                    id="add-name"
-                    value={newPlayer.name}
+        {isAuthenticated && (
+          <div className="mb-8 flex gap-3">
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-red-700 hover:bg-red-800 text-white flex-1 md:flex-none">
+                  <Plus className="w-5 h-5 mr-2" />
+                  添加球员
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>添加新球员</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label htmlFor="add-name">姓名 *</Label>
+                    <Input
+                      id="add-name"
+                      value={newPlayer.name}
                     onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
                     placeholder="请输入球员姓名"
                   />
@@ -702,6 +705,7 @@ export default function PlayersPage() {
             </DialogContent>
           </Dialog>
         </div>
+        )}
 
         {/* 球员列表 */}
         {isLoading ? (

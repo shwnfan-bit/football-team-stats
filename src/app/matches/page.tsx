@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { storage } from '@/lib/storage';
 import { initializeChengduDadieTeam, getChengduDadieTeamId } from '@/lib/team';
 import { cacheManager } from '@/lib/dataCache';
+import { useAuth } from '@/contexts/AuthContext';
 import { Match, Player, PlayerPosition, POSITION_LABELS, MatchPlayerStat } from '@/types';
 
 export default function MatchesPage() {
+  const { isAuthenticated } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -425,17 +427,19 @@ export default function MatchesPage() {
                           {match.location}
                         </div>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditMatch(match.id);
-                        }}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
+                      {isAuthenticated && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditMatch(match.id);
+                          }}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
