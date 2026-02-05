@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, UserPlus, Trash2, Shield, Edit2, Camera, User, Settings, Database, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Player, PlayerPosition, POSITION_LABELS } from '@/types';
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [isStorageManageDialogOpen, setIsStorageManageDialogOpen] = useState(false);
@@ -32,14 +33,15 @@ export default function PlayersPage() {
 
   useEffect(() => {
     (async () => {
-      await initializeChengduDadieTeam();
+      const id = await initializeChengduDadieTeam();
+      setTeamId(id);
       await loadPlayers();
     })();
   }, []);
 
   const loadPlayers = async () => {
+    if (!teamId) return;
     try {
-      const teamId = await getChengduDadieTeamId();
       const loadedPlayers = await storage.getPlayersByTeam(teamId);
       setPlayers(loadedPlayers);
     } catch (error) {
@@ -81,7 +83,10 @@ export default function PlayersPage() {
     }
 
     try {
-      const teamId = await getChengduDadieTeamId();
+      if (!teamId) {
+        alert('球队未初始化，请刷新页面重试');
+        return;
+      }
       
       const playerData = {
         teamId,
@@ -155,13 +160,9 @@ export default function PlayersPage() {
     }
 
     try {
-      // 更新球员时，不修改 teamId，从现有球员获取
-      const currentPlayer = players.find(p => p.id === editingPlayerId);
-      if (!currentPlayer) {
-        alert('找不到要更新的球员');
-        return;
-      }
-
+      if (!editingPlayerId) return;
+      
+      // 更新球员时，不修改 teamId
       const updatedPlayerData = {
         name: newPlayer.name.trim(),
         number: parseInt(newPlayer.number),
@@ -280,12 +281,16 @@ export default function PlayersPage() {
   const handleClearAllData = async () => {
     if (confirm('确定要清理所有数据吗？此操作不可恢复！\n\n建议先导出数据备份。')) {
       try {
-        localStorage.clear();
+        // 直接清空球员列表
+        setPlayers([]);
         alert('所有数据已清理！');
-        // 重新初始化
-        await initializeChengduDadieTeam();
-        await loadPlayers();
         setIsStorageManageDialogOpen(false);
+        
+        // 后台异步重新初始化
+        initializeChengduDadieTeam().then(id => {
+          setTeamId(id);
+          loadPlayers().catch(console.error);
+        }).catch(console.error);
       } catch (error) {
         console.error('清理数据失败:', error);
         alert('清理数据失败: ' + (error as Error).message);
@@ -294,7 +299,10 @@ export default function PlayersPage() {
   };
 
   const handleClearOldMatches = async () => {
-    const teamId = getChengduDadieTeamId();
+    if (!teamId) {
+      alert('球队未初始化，请刷新页面重试');
+      return;
+    }
     const matches = await storage.getMatchesByTeam(teamId);
     if (matches.length === 0) {
       alert('没有比赛记录可以清理');
@@ -305,7 +313,8 @@ export default function PlayersPage() {
       try {
         await Promise.all(matches.map(match => storage.deleteMatch(match.id)));
         alert('比赛记录已清理！');
-        await loadPlayers();
+        // 不等待 loadPlayers 完成，直接关闭对话框
+        loadPlayers().catch(console.error);
         setIsStorageManageDialogOpen(false);
       } catch (error) {
         console.error('清理比赛记录失败:', error);
@@ -314,8 +323,10 @@ export default function PlayersPage() {
     }
   };
 
-  // 按照号码排序球员
-  const sortedPlayers = [...players].sort((a, b) => a.number - b.number);
+  // 按照号码排序球员（使用 useMemo 优化性能）
+  const sortedPlayers = useMemo(() => {
+    return [...players].sort((a, b) => a.number - b.number);
+  }, [players]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -508,8 +519,14 @@ export default function PlayersPage() {
                           className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                           onClick={async () => {
                             if (confirm(`确定要删除 ${player.name} 吗？`)) {
-                              await storage.deletePlayer(player.id);
-                              await loadPlayers();
+                              try {
+                                await storage.deletePlayer(player.id);
+                                // 立即从列表中移除（乐观更新）
+                                setPlayers(prev => prev.filter(p => p.id !== player.id));
+                              } catch (error) {
+                                console.error('删除球员失败:', error);
+                                alert('删除球员失败: ' + (error as Error).message);
+                              }
                             }
                           }}
                         >
