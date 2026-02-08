@@ -161,7 +161,7 @@ export default function MatchesPage() {
 
     setEditMatch({
       opponent: match.opponent,
-      date: match.date,
+      date: match.date instanceof Date ? match.date.toISOString() : new Date(match.date).toISOString(),
       location: match.location || '',
       matchType: match.matchType,
       matchNature: match.matchNature,
