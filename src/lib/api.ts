@@ -1,5 +1,22 @@
 // API 客户端 - 封装所有后端 API 调用
 
+import type {
+  Team,
+  Player,
+  Match,
+  MatchPlayerStat,
+  Season,
+  InsertTeam,
+  UpdateTeam,
+  InsertPlayer,
+  UpdatePlayer,
+  InsertMatch,
+  UpdateMatch,
+  InsertMatchPlayerStat,
+  InsertSeason,
+  UpdateSeason,
+} from '@/storage/database';
+
 const BASE_URL = '/api';
 
 // 通用请求方法

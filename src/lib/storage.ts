@@ -10,7 +10,6 @@ import {
 import type {
   Team,
   Player,
-  DatabaseMatch,
   Season,
   MatchPlayerStat,
   InsertTeam,
@@ -19,11 +18,12 @@ import type {
   UpdatePlayer,
   InsertMatch,
   UpdateMatch,
+  InsertMatchPlayerStat,
   InsertSeason,
   UpdateSeason,
 } from '@/storage/database';
 
-import type { Match } from '@/types';
+import type { Match, DatabaseMatch } from '@/types';
 
 export type {
   Team,
@@ -127,8 +127,8 @@ export const storage = {
     console.warn('setMatches is not supported in API mode');
   },
 
-  addMatch: (match: InsertMatch): Promise<Match> => {
-    return matchesApi.create(match);
+  addMatch: (match: InsertMatch): Promise<DatabaseMatch> => {
+    return matchesApi.create(match) as Promise<DatabaseMatch>;
   },
 
   updateMatch: (matchId: string, updatedMatch: UpdateMatch): Promise<void> => {
@@ -178,6 +178,7 @@ export const storage = {
   deleteMatchPlayerStat: (statId: string): Promise<void> => {
     // API 模式下暂不支持删除单个统计
     console.warn('deleteMatchPlayerStat is not supported yet');
+    return Promise.resolve();
   },
 
   // ==================== Seasons ====================

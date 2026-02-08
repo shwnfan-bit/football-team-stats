@@ -158,7 +158,7 @@ export default function StatsPage() {
       const matchData = {
         teamId,
         opponent: newMatch.opponent.trim(),
-        date: newMatch.date,
+        date: new Date(newMatch.date),
         location: newMatch.location || undefined,
         matchType: newMatch.matchType,
         matchNature: newMatch.matchNature,
@@ -387,7 +387,7 @@ export default function StatsPage() {
                                 <span>{player.name}</span>
                                 {player.position && (
                                   <span className="text-xs text-slate-500">
-                                    {POSITION_LABELS[player.position]}
+                                    {POSITION_LABELS[player.position as PlayerPosition]}
                                   </span>
                                 )}
                               </div>

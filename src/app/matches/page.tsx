@@ -134,9 +134,9 @@ export default function MatchesPage() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('zh-CN', {
+  const formatDate = (date: Date | string) => {
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toLocaleDateString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -241,7 +241,7 @@ export default function MatchesPage() {
       // 更新比赛基本信息
       const updatedMatchData = {
         opponent: editMatch.opponent.trim(),
-        date: editMatch.date,
+        date: new Date(editMatch.date),
         location: editMatch.location || undefined,
         matchType: editMatch.matchType,
         matchNature: editMatch.matchNature,
@@ -399,13 +399,13 @@ export default function MatchesPage() {
 
                       {/* 右侧：比赛类型 */}
                       <div className="flex items-center gap-2">
-                        <Badge className={getMatchTypeColor(match.matchType)}>
+                        <Badge className={getMatchTypeColor(match.matchType as 'home' | 'away')}>
                           {match.matchType === 'home' ? (
                             <Home className="w-3 h-3 mr-1" />
                           ) : (
                             <Plane className="w-3 h-3 mr-1" />
                           )}
-                          {getMatchTypeLabel(match.matchType)}
+                          {getMatchTypeLabel(match.matchType as 'home' | 'away')}
                         </Badge>
                         {isExpanded ? (
                           <ChevronUp className="w-5 h-5 text-slate-400" />
@@ -417,9 +417,9 @@ export default function MatchesPage() {
 
                     {/* 第二行：比赛性质和地点 */}
                     <div className="mt-3 flex items-center justify-center gap-4 text-sm">
-                      <Badge className={getMatchNatureColor(match.matchNature)}>
+                      <Badge className={getMatchNatureColor(match.matchNature as 'friendly' | 'internal' | 'cup' | 'league')}>
                         <Trophy className="w-3 h-3 mr-1" />
-                        {getMatchNatureLabel(match.matchNature)}
+                        {getMatchNatureLabel(match.matchNature as 'friendly' | 'internal' | 'cup' | 'league')}
                       </Badge>
                       {match.location && (
                         <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400">
@@ -672,7 +672,7 @@ export default function MatchesPage() {
                             <span>{player.name}</span>
                             {player.position && (
                               <span className="text-xs text-slate-500">
-                                {POSITION_LABELS[player.position]}
+                                {POSITION_LABELS[player.position as PlayerPosition]}
                               </span>
                             )}
                           </div>

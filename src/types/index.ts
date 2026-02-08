@@ -2,6 +2,23 @@
 // 注意：此文件中的类型已迁移至数据库 schema (src/storage/database/shared/schema.ts)
 // 为了向后兼容，此处重新导出数据库类型
 
+import type {
+  Team,
+  Player,
+  Season,
+  MatchPlayerStat,
+  InsertTeam,
+  UpdateTeam,
+  InsertPlayer,
+  UpdatePlayer,
+  InsertMatch,
+  UpdateMatch,
+  InsertSeason,
+  UpdateSeason,
+  InsertMatchPlayerStat,
+  UpdateMatchPlayerStat,
+} from '@/storage/database/shared/schema';
+
 export type {
   Team,
   Player,
@@ -15,9 +32,6 @@ export type {
   UpdateMatch,
   InsertSeason,
   UpdateSeason,
-} from '@/storage/database/shared/schema';
-
-export type {
   InsertMatchPlayerStat,
   UpdateMatchPlayerStat,
 } from '@/storage/database/shared/schema';

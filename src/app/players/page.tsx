@@ -130,11 +130,11 @@ export default function PlayersPage() {
         name: newPlayer.name.trim(),
         number: parseInt(newPlayer.number),
         position: newPlayer.position,
-        birthday: newPlayer.birthday,
-        height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
-        weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
+        birthday: new Date(newPlayer.birthday),
+        height: newPlayer.height ? parseInt(newPlayer.height) : null,
+        weight: newPlayer.weight ? parseInt(newPlayer.weight) : null,
         isCaptain: newPlayer.isCaptain,
-        photo: newPlayer.photo || undefined,
+        photo: newPlayer.photo || null,
       };
 
       // 添加球员到数据库
@@ -164,8 +164,8 @@ export default function PlayersPage() {
       setNewPlayer({
         name: player.name,
         number: player.number.toString(),
-        position: player.position || 'midfielder',
-        birthday: player.birthday,
+        position: (player.position || 'midfielder') as PlayerPosition,
+        birthday: player.birthday.toISOString().split('T')[0],
         height: player.height?.toString() || '',
         weight: player.weight?.toString() || '',
         isCaptain: player.isCaptain || false,
@@ -206,11 +206,11 @@ export default function PlayersPage() {
         name: newPlayer.name.trim(),
         number: parseInt(newPlayer.number),
         position: newPlayer.position,
-        birthday: newPlayer.birthday,
-        height: newPlayer.height ? parseInt(newPlayer.height) : undefined,
-        weight: newPlayer.weight ? parseInt(newPlayer.weight) : undefined,
+        birthday: new Date(newPlayer.birthday),
+        height: newPlayer.height ? parseInt(newPlayer.height) : null,
+        weight: newPlayer.weight ? parseInt(newPlayer.weight) : null,
         isCaptain: newPlayer.isCaptain,
-        photo: newPlayer.photo || undefined,
+        photo: newPlayer.photo || null,
       };
 
       // 更新球员到数据库
@@ -272,38 +272,17 @@ export default function PlayersPage() {
 
   // 数据管理功能
   const getStorageInfo = () => {
-    if (typeof window === 'undefined') return null;
-
-    const info = {
-      players: {
-        count: storage.getPlayers().length,
-        size: new Blob([localStorage.getItem('football_players') || '']).size,
-      },
-      matches: {
-        count: storage.getMatches().length,
-        size: new Blob([localStorage.getItem('football_matches') || '']).size,
-      },
-      teams: {
-        count: storage.getTeams().length,
-        size: new Blob([localStorage.getItem('football_teams') || '']).size,
-      },
-      seasons: {
-        count: storage.getSeasons().length,
-        size: new Blob([localStorage.getItem('football_seasons') || '']).size,
-      },
-    };
-
-    const totalSize = Object.values(info).reduce((sum, item) => sum + item.size, 0);
-    return { ...info, totalSize };
+    // 已迁移至数据库，不再使用 localStorage
+    return null;
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     try {
       const data = {
-        players: storage.getPlayers(),
-        matches: storage.getMatches(),
-        teams: storage.getTeams(),
-        seasons: storage.getSeasons(),
+        players: await storage.getPlayers(),
+        matches: await storage.getMatches(),
+        teams: await storage.getTeams(),
+        seasons: await storage.getSeasons(),
         exportTime: new Date().toISOString(),
       };
 
@@ -635,36 +614,10 @@ export default function PlayersPage() {
               <div className="space-y-4">
                 {/* 存储使用情况 */}
                 <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 space-y-2">
-                  <h3 className="font-semibold text-sm mb-3">存储使用情况</h3>
-                  {(() => {
-                    const storageInfo = getStorageInfo();
-                    if (!storageInfo) return null;
-                    const formatSize = (bytes: number) => {
-                      if (bytes < 1024) return bytes + ' B';
-                      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-                      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-                    };
-                    return (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600 dark:text-slate-400">球员数据：</span>
-                          <span className="font-medium">{storageInfo.players.count} 个 ({formatSize(storageInfo.players.size)})</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600 dark:text-slate-400">比赛记录：</span>
-                          <span className="font-medium">{storageInfo.matches.count} 场 ({formatSize(storageInfo.matches.size)})</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600 dark:text-slate-400">球队信息：</span>
-                          <span className="font-medium">{storageInfo.teams.count} 个 ({formatSize(storageInfo.teams.size)})</span>
-                        </div>
-                        <div className="flex justify-between text-sm border-t pt-2 mt-2">
-                          <span className="font-semibold">总计：</span>
-                          <span className="font-semibold text-red-600 dark:text-red-400">{formatSize(storageInfo.totalSize)}</span>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  <h3 className="font-semibold text-sm mb-3">数据存储</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    现在使用云端数据库（Supabase）存储数据，不再受浏览器存储空间限制。
+                  </p>
                 </div>
 
                 {/* 提示信息 */}
@@ -742,7 +695,7 @@ export default function PlayersPage() {
                   {/* 该位置的球员网格 */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {group.players.map((player) => {
-                      const age = calculateAge(player.birthday);
+                      const age = calculateAge(player.birthday.toISOString());
                       return (
                         <Card key={player.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                           {/* 球员照片 - 5:4 比例，无圆角，占满红色区域 */}
